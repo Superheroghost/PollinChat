@@ -508,9 +508,9 @@ function saveSettings() {
 function applyTheme(theme) {
     if (theme === 'system') {
         const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        document.body.className = isDark ? 'dark-theme' : 'light-theme';
+        document.documentElement.className = isDark ? 'dark-theme' : 'light-theme';
     } else {
-        document.body.className = `${theme}-theme`;
+        document.documentElement.className = `${theme}-theme`;
     }
 }
 
