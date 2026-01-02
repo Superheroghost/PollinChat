@@ -18,8 +18,7 @@
     --radius-sm: 8px;
 }
 
-html.light-theme,
-html.light-theme :root {
+html.light-theme {
     --bg-primary: #ffffff;
     --bg-secondary: #f9f9f9;
     --sidebar-bg: #f2f2f2;

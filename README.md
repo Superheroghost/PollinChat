@@ -7,7 +7,7 @@ A modern, feature-rich chat interface powered by [Pollinations.ai](https://polli
 ## Features
 
 - 🤖 **Multiple AI Models**: Access to 20+ AI models including:
-  - OpenAI (GPT-4, GPT-4 Turbo)
+  - OpenAI (GPT-5.2, GPT-5 Mini)
   - Claude (Anthropic)
   - Gemini (Google)
   - Mistral
@@ -83,9 +83,9 @@ Access settings by clicking the gear icon:
 ## Supported Models
 
 ### Vision-Capable Models
-- OpenAI Fast
-- OpenAI
-- OpenAI Large
+- OpenAI Fast (GPT-5 Mini)
+- OpenAI (GPT-5 Mini)
+- OpenAI Large (GPT-5.2)
 - Claude Fast
 - Claude
 - Claude Large
@@ -100,7 +100,7 @@ Access settings by clicking the gear icon:
 - Kimi K2 Thinking
 - Perplexity Reasoning
 - Gemini Large
-- OpenAI Large
+- OpenAI Large (GPT-5.2)
 
 ### Additional Models
 - Mistral
