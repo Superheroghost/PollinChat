@@ -1371,3 +1371,246 @@ input:checked + .slider::before {
         height: 52px;
     }
 }
+
+/* ===================== */
+/* Premium Enhancements  */
+/* ===================== */
+
+/* Glassmorphism effects for cards */
+.suggestion-card {
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+/* Animated gradient border on focus */
+.input-wrapper::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: var(--radius-2xl);
+    padding: 1px;
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-tertiary), var(--accent-primary));
+    background-size: 200% 200%;
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity var(--transition-normal);
+    pointer-events: none;
+}
+
+.input-wrapper:focus-within::before {
+    opacity: 1;
+    animation: gradientShift 3s ease infinite;
+}
+
+@keyframes gradientShift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+}
+
+/* Pulse animation for new chat button */
+.new-chat-btn {
+    position: relative;
+}
+
+.new-chat-btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: var(--radius-lg);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+    animation: pulse 2s ease-out infinite;
+    pointer-events: none;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 8px rgba(16, 185, 129, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+    }
+}
+
+/* Smooth reveal animation for messages */
+.message {
+    will-change: transform, opacity;
+}
+
+/* Better focus states with rings */
+button:focus-visible, 
+select:focus-visible, 
+input:focus-visible,
+textarea:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--bg-primary), 0 0 0 4px var(--accent-primary);
+}
+
+/* Keyboard navigation indicator */
+.history-item:focus-visible {
+    outline: none;
+    box-shadow: inset 0 0 0 2px var(--accent-primary);
+}
+
+/* Shimmer effect for loading */
+@keyframes shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+.typing-indicator {
+    position: relative;
+}
+
+/* Better text selection in code blocks */
+.message-content pre code::selection {
+    background: var(--accent-glow-strong);
+}
+
+/* Smooth scrollbar appearance */
+.chat-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.chat-container::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: var(--radius-full);
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+
+.chat-container::-webkit-scrollbar-thumb:hover {
+    background: var(--border-hover);
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+
+/* Logo glow animation */
+.welcome-logo {
+    animation: logoGlow 3s ease-in-out infinite alternate;
+}
+
+@keyframes logoGlow {
+    0% {
+        filter: drop-shadow(0 0 20px rgba(16, 185, 129, 0.3));
+    }
+    100% {
+        filter: drop-shadow(0 0 35px rgba(16, 185, 129, 0.5));
+    }
+}
+
+/* Hover lift effect for suggestion cards */
+.suggestion-card {
+    will-change: transform, box-shadow;
+}
+
+/* Active state for buttons */
+.new-chat-btn:active,
+.send-btn:active:not(:disabled),
+.save-btn:active {
+    transform: scale(0.97);
+}
+
+/* Improved table styling in messages */
+.message-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0;
+    font-size: 13px;
+}
+
+.message-content th,
+.message-content td {
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    text-align: left;
+}
+
+.message-content th {
+    background: var(--bg-secondary);
+    font-weight: 600;
+}
+
+.message-content tr:nth-child(even) {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+/* Horizontal rule styling */
+.message-content hr {
+    border: none;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border-color), transparent);
+    margin: 20px 0;
+}
+
+/* Task list styling */
+.message-content input[type="checkbox"] {
+    margin-right: 8px;
+    accent-color: var(--accent-primary);
+}
+
+/* Better tooltip styling */
+[title] {
+    position: relative;
+}
+
+/* Disabled state improvements */
+button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+/* Print styles */
+@media print {
+    .sidebar,
+    .input-area,
+    .top-bar {
+        display: none !important;
+    }
+    
+    .main-content {
+        width: 100% !important;
+    }
+    
+    .messages-list {
+        max-width: 100% !important;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+    
+    .welcome-logo,
+    .new-chat-btn::after {
+        animation: none;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    :root {
+        --border-color: #525252;
+        --border-subtle: #404040;
+    }
+    
+    html.light-theme {
+        --border-color: #a3a3a3;
+        --border-subtle: #d4d4d4;
+    }
+}

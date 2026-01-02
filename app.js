@@ -286,8 +286,7 @@ async function sendMessage() {
 }
 
 async function fetchAIResponse(messages, retryCount = 0) {
-    const MAX_RETRIES = 2;
-    const TIMEOUT_MS = 120000; // 2 minutes timeout
+    const MAX_RETRIES = 3;
     
     const model = modelSelector.value;
     const headers = {
@@ -316,34 +315,36 @@ async function fetchAIResponse(messages, retryCount = 0) {
         };
     }
 
-    // Create AbortController for timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
-
     try {
+        // No timeout - let the request complete naturally
         const response = await fetch(API_ENDPOINT, {
             method: 'POST',
             headers: headers,
-            body: JSON.stringify(body),
-            signal: controller.signal
+            body: JSON.stringify(body)
         });
-
-        clearTimeout(timeoutId);
 
         if (!response.ok) {
             const err = await response.json().catch(() => ({}));
             const statusCode = response.status;
             
-            // Handle 524 timeout error with retry
+            // Handle 524 timeout error with retry (server-side timeout)
             if (statusCode === 524 && retryCount < MAX_RETRIES) {
                 console.log(`Received 524 timeout, retrying... (attempt ${retryCount + 1}/${MAX_RETRIES})`);
+                await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
                 return fetchAIResponse(messages, retryCount + 1);
             }
             
-            // Handle other 5xx errors with retry
+            // Handle other 5xx errors with retry using exponential backoff
             if (statusCode >= 500 && statusCode < 600 && retryCount < MAX_RETRIES) {
                 console.log(`Server error ${statusCode}, retrying... (attempt ${retryCount + 1}/${MAX_RETRIES})`);
-                await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1))); // Exponential backoff
+                await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
+                return fetchAIResponse(messages, retryCount + 1);
+            }
+            
+            // Handle rate limiting with longer backoff
+            if (statusCode === 429 && retryCount < MAX_RETRIES) {
+                console.log(`Rate limited, retrying... (attempt ${retryCount + 1}/${MAX_RETRIES})`);
+                await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 2000));
                 return fetchAIResponse(messages, retryCount + 1);
             }
             
@@ -352,24 +353,11 @@ async function fetchAIResponse(messages, retryCount = 0) {
 
         return await response.json();
     } catch (error) {
-        clearTimeout(timeoutId);
-        
-        // Handle abort/timeout
-        if (error.name === 'AbortError') {
-            if (retryCount < MAX_RETRIES) {
-                console.log(`Request timeout, retrying... (attempt ${retryCount + 1}/${MAX_RETRIES})`);
-                return fetchAIResponse(messages, retryCount + 1);
-            }
-            throw new Error('Request timed out. The server is taking too long to respond. Please try again or select a different model.');
-        }
-        
-        // Handle network errors with retry
-        if (error.message.includes('fetch') || error.message.includes('network')) {
-            if (retryCount < MAX_RETRIES) {
-                console.log(`Network error, retrying... (attempt ${retryCount + 1}/${MAX_RETRIES})`);
-                await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
-                return fetchAIResponse(messages, retryCount + 1);
-            }
+        // Handle network errors with retry using exponential backoff
+        if ((error.message.includes('fetch') || error.message.includes('network') || error.name === 'TypeError') && retryCount < MAX_RETRIES) {
+            console.log(`Network error, retrying... (attempt ${retryCount + 1}/${MAX_RETRIES})`);
+            await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
+            return fetchAIResponse(messages, retryCount + 1);
         }
         
         throw error;
@@ -520,8 +508,9 @@ function renderMessage(msg, isPlaceholder = false) {
 
 function processCodeBlocks(container) {
     container.querySelectorAll('pre').forEach((pre) => {
-        // Skip if already processed
-        if (pre.querySelector('.code-header')) return;
+        // Skip if already processed using data attribute
+        if (pre.dataset.processed === 'true') return;
+        pre.dataset.processed = 'true';
         
         const code = pre.querySelector('code');
         if (!code) return;
