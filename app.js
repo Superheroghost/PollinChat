@@ -262,15 +262,13 @@ async function sendMessage() {
         scrollToBottom();
     } catch (error) {
         console.error('Error fetching AI response:', error);
+        contentElement.classList.remove('typing-indicator');
         
         // Completely ignore timeout errors (524) - don't show anything
         if (error.message && error.message.includes('524')) {
-            contentElement.classList.remove('typing-indicator');
             contentElement.innerHTML = '';
             return;
         }
-        
-        contentElement.classList.remove('typing-indicator');
         
         let errorMessage = error.message || "Failed to connect to Pollinations AI.";
         let helpfulTip = "";
