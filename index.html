@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PollinChat — Advanced AI Studio</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css">
+    <script type="importmap">
+        {
+          "imports": {
+            "marked": "https://esm.sh/marked",
+            "highlight.js": "https://esm.sh/highlight.js"
+          }
+        }
+      </script>
+</head>
+<body class="dark-theme">
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <button class="new-chat-btn" id="newChatBtn">
+                    <i class="fas fa-plus"></i> New Chat
+                </button>
+                <button class="mobile-close-btn" id="mobileCloseBtn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="chat-history" id="chatHistory">
+                <!-- Chat items will be injected here -->
+            </div>
+            <div class="sidebar-footer">
+                <button class="settings-btn" id="settingsBtn">
+                    <i class="fas fa-cog"></i> Settings
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="top-bar-left">
+                    <button class="mobile-menu-btn" id="mobileMenuBtn">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <div class="brand-logo">
+                        <img src="logo.png" alt="Logo">
+                        <span>PollinChat</span>
+                    </div>
+                </div>
+                <div class="model-selector-container">
+                    <div id="reasoningControls" class="reasoning-controls" style="display: none;">
+                        <label class="switch-container" id="thinkingToggleContainer">
+                            <span class="label-text">Thinking</span>
+                            <input type="checkbox" id="thinkingToggle" checked>
+                            <span class="slider"></span>
+                        </label>
+                        <select id="reasoningEffort" class="effort-select" style="display: none;">
+                            <option value="none">None</option>
+                            <option value="minimal">Minimal</option>
+                            <option value="low">Low</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="high">High</option>
+                        </select>
+                    </div>
+                    <select id="modelSelector" class="model-select">
+                        <option value="openai">OpenAI</option>
+                        <option value="openai-large">OpenAI Large</option>
+                        <option value="openai-fast">OpenAI Fast</option>
+                        <option value="claude">Claude</option>
+                        <option value="claude-large">Claude Large</option>
+                        <option value="claude-fast">Claude Fast</option>
+                        <option value="gemini">Gemini</option>
+                        <option value="gemini-large">Gemini Large</option>
+                        <option value="gemini-fast">Gemini Fast</option>
+                        <option value="gemini-search">Gemini Search</option>
+                        <option value="mistral">Mistral</option>
+                        <option value="grok">Grok</option>
+                        <option value="qwen-coder">Qwen Coder</option>
+                        <option value="perplexity-fast">Perplexity Fast</option>
+                        <option value="perplexity-reasoning">Perplexity Reasoning</option>
+                        <option value="nova-micro">Nova Micro</option>
+                        <option value="chickytutor">ChickyTutor</option>
+                        <option value="deepspeak">DeepSpeak</option>
+                        <option value="kimi-k2-thinking">Kimi K2 Thinking</option>
+                        <option value="midjourney">Midjourney</option>
+                    </select>
+                </div>
+                <div class="top-bar-actions">
+                    <!-- Actions like export/share could go here -->
+                </div>
+            </header>
+
+            <div class="chat-container" id="chatContainer">
+                <div class="welcome-screen" id="welcomeScreen">
+                    <div class="welcome-content">
+                        <div class="logo-container">
+                            <img src="logo.png" alt="Pollinations AI" class="welcome-logo">
+                        </div>
+                        <h1 class="welcome-title">PollinChat</h1>
+                        <p class="welcome-subtitle">Explore the universe of intelligence.</p>
+                        <div class="suggestions">
+                            <button class="suggestion-card" onclick="setInput('Write a Python script to scrape a website.')">
+                                <i class="fas fa-code"></i>
+                                <div class="suggestion-text">
+                                    <p>Write a script</p>
+                                    <span>to scrape a website</span>
+                                </div>
+                            </button>
+                            <button class="suggestion-card" onclick="setInput('Explain quantum computing in simple terms.')">
+                                <i class="fas fa-lightbulb"></i>
+                                <div class="suggestion-text">
+                                    <p>Explain</p>
+                                    <span>quantum computing</span>
+                                </div>
+                            </button>
+                            <button class="suggestion-card" onclick="setInput('Help me write a professional email about a project delay.')">
+                                <i class="fas fa-pen-nib"></i>
+                                <div class="suggestion-text">
+                                    <p>Write an email</p>
+                                    <span>about a project delay</span>
+                                </div>
+                            </button>
+                            <button class="suggestion-card" onclick="setInput('Create a 7-day keto meal plan.')">
+                                <i class="fas fa-utensils"></i>
+                                <div class="suggestion-text">
+                                    <p>Plan a meal</p>
+                                    <span>7-day keto diet</span>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="messages-list" id="messagesList"></div>
+            </div>
+
+            <footer class="input-area">
+                <div class="input-wrapper">
+                    <div id="imagePreviewContainer" class="image-preview-container"></div>
+                    <div class="input-row">
+                        <button id="attachBtn" class="attach-btn" title="Attach image">
+                            <i class="fas fa-paperclip"></i>
+                        </button>
+                        <input type="file" id="imageInput" accept="image/*" style="display: none;">
+                        <textarea id="chatInput" placeholder="Message Pollinations..." rows="1"></textarea>
+                        <button id="sendBtn" class="send-btn" disabled>
+                            <i class="fas fa-arrow-up"></i>
+                        </button>
+                    </div>
+                </div>
+                <p class="disclaimer">Powered by Pollinations.ai. LLMs can make mistakes. Verify important info.</p>
+            </footer>
+        </main>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Settings</h2>
+                <button class="close-modal" id="closeSettings"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="setting-group">
+                    <label for="apiKey">Pollinations API Key</label>
+                    <input type="password" id="apiKey" placeholder="Enter your API Key (Optional for some models)">
+                    <small>Get yours at <a href="https://pollinations.ai" target="_blank">pollinations.ai</a></small>
+                </div>
+                <div class="setting-group">
+                    <label for="themeSelect">Theme</label>
+                    <select id="themeSelect">
+                        <option value="dark">Dark</option>
+                        <option value="light">Light</option>
+                        <option value="system">System</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="save-btn" id="saveSettings">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>
