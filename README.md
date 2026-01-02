@@ -28,7 +28,7 @@ A modern, feature-rich chat interface powered by [Pollinations.ai](https://polli
 ### Prerequisites
 
 - A modern web browser (Chrome, Firefox, Safari, Edge)
-- Optional: Pollinations API Key for enhanced access (available at [pollinations.ai](https://pollinations.ai))
+- Pollinations API Key (available at [pollinations.ai](https://pollinations.ai))
 
 ### Installation
 
@@ -76,7 +76,7 @@ For vision-capable models:
 ### Settings
 
 Access settings by clicking the gear icon:
-- **API Key**: Optional, for enhanced access to some models
+- **API Key**: Required for all models
 - **Theme**: Choose between Light, Dark, or System theme
 - **Delete All Chats**: Clear all conversation history
 
