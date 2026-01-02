@@ -263,10 +263,10 @@ async function sendMessage() {
     } catch (error) {
         console.error('Error fetching AI response:', error);
         
-        // Silently ignore timeout errors (524) - don't show error UI
+        // Completely ignore timeout errors (524) - don't show anything
         if (error.message && error.message.includes('524')) {
             contentElement.classList.remove('typing-indicator');
-            contentElement.innerHTML = marked.parse("Request timed out. Please try again.");
+            contentElement.innerHTML = '';
             return;
         }
         
