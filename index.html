@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PollinChat</title>
+    <link rel="icon" type="image/png" href="logo.png">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css">
@@ -15,8 +16,29 @@
           }
         }
       </script>
+    <script>
+        // Apply theme immediately to prevent flickering
+        (function() {
+            try {
+                const settings = JSON.parse(localStorage.getItem('pollinations_settings'));
+                if (settings && settings.theme) {
+                    const theme = settings.theme;
+                    if (theme === 'system') {
+                        const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                        document.documentElement.className = isDark ? 'dark-theme' : 'light-theme';
+                    } else {
+                        document.documentElement.className = theme + '-theme';
+                    }
+                } else {
+                    document.documentElement.className = 'light-theme';
+                }
+            } catch(e) {
+                document.documentElement.className = 'light-theme';
+            }
+        })();
+    </script>
 </head>
-<body class="light-theme">
+<body>
     <div class="app-container">
         <!-- Sidebar -->
         <aside class="sidebar" id="sidebar">
