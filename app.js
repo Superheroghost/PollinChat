@@ -313,18 +313,28 @@ async function fetchAIResponse(messages) {
         };
     }
 
-    const response = await fetch(API_ENDPOINT, {
-        method: 'POST',
-        headers: headers,
-        body: JSON.stringify(body)
-    });
+    // Retry indefinitely on timeout (524) errors
+    while (true) {
+        const response = await fetch(API_ENDPOINT, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(body)
+        });
 
-    if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.error?.message || `HTTP ${response.status}`);
+        // If timeout error (524), wait briefly then retry automatically
+        if (response.status === 524) {
+            console.log('Timeout (524) - retrying in 1 second...');
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            continue;
+        }
+
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.error?.message || `HTTP ${response.status}`);
+        }
+
+        return await response.json();
     }
-
-    return await response.json();
 }
 
 function createNewChat(initialText = '') {

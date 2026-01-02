@@ -327,42 +327,42 @@ input:checked + .slider:before {
 }
 
 .logo-container {
-    margin-bottom: 24px;
+    margin-bottom: 20px;
 }
 
 .welcome-logo {
-    width: 84px;
-    height: 84px;
-    border-radius: 20px;
-    filter: drop-shadow(0 0 10px rgba(16, 163, 127, 0.2));
+    width: 72px;
+    height: 72px;
+    border-radius: 16px;
+    filter: drop-shadow(0 0 8px rgba(16, 163, 127, 0.15));
 }
 
 .welcome-screen h1 {
-    font-size: 48px;
-    font-weight: 800;
-    margin-bottom: 48px;
-    letter-spacing: -0.03em;
+    font-size: 42px;
+    font-weight: 700;
+    margin-bottom: 40px;
+    letter-spacing: -0.02em;
     color: var(--accent-color);
-    text-shadow: 0 0 20px rgba(16, 163, 127, 0.1);
+    text-shadow: 0 0 16px rgba(16, 163, 127, 0.08);
 }
 
 .suggestions {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
+    gap: 12px;
 }
 
 .suggestion-card {
     background: var(--bg-secondary);
     border: 1px solid var(--border-color);
-    padding: 20px;
+    padding: 16px 18px;
     border-radius: var(--radius-md);
     text-align: left;
     cursor: pointer;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     display: flex;
     align-items: flex-start;
-    gap: 16px;
+    gap: 14px;
 }
 
 .suggestion-card:hover {
@@ -372,21 +372,21 @@ input:checked + .slider:before {
 }
 
 .suggestion-card i {
-    font-size: 18px;
+    font-size: 16px;
     color: var(--accent-color);
-    margin-top: 2px;
+    margin-top: 1px;
 }
 
 .suggestion-card .suggestion-text p {
     font-weight: 600;
-    font-size: 15px;
-    margin-bottom: 4px;
+    font-size: 14px;
+    margin-bottom: 3px;
     color: var(--text-primary);
 }
 
 .suggestion-card .suggestion-text span {
     color: var(--text-secondary);
-    font-size: 13px;
+    font-size: 12px;
     display: block;
 }
 
@@ -395,15 +395,15 @@ input:checked + .slider:before {
     width: 100%;
     max-width: 840px;
     margin: 0 auto;
-    padding: 40px 20px;
+    padding: 32px 20px;
     display: flex;
     flex-direction: column;
-    gap: 32px;
+    gap: 20px;
 }
 
 .message {
     display: flex;
-    gap: 20px;
+    gap: 14px;
     animation: messageIn 0.3s ease-out;
 }
 
@@ -417,14 +417,14 @@ input:checked + .slider:before {
 }
 
 .avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    margin-top: 4px;
+    margin-top: 2px;
 }
 
 .user .avatar {
@@ -438,16 +438,16 @@ input:checked + .slider:before {
 
 .message-content {
     flex: 1;
-    font-size: 16px;
+    font-size: 15px;
     overflow-wrap: break-word;
-    max-width: 85%;
-    line-height: 1.7;
+    max-width: 80%;
+    line-height: 1.6;
 }
 
 .user .message-content {
     background: var(--user-msg-bg);
-    padding: 12px 18px;
-    border-radius: 18px 18px 4px 18px;
+    padding: 8px 14px;
+    border-radius: 16px 16px 4px 16px;
     text-align: right;
 }
 
@@ -479,18 +479,23 @@ input:checked + .slider:before {
 }
 
 .copy-code-btn {
-    background: transparent;
-    border: none;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
     color: var(--text-secondary);
     cursor: pointer;
     display: flex;
     align-items: center;
     gap: 6px;
     font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
 }
 
 .copy-code-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
     color: white;
+    border-color: rgba(255, 255, 255, 0.3);
 }
 
 .message-content code {
@@ -570,8 +575,8 @@ input:checked + .slider:before {
     position: relative;
     background-color: var(--input-bg);
     border: 1px solid var(--border-color);
-    border-radius: 24px;
-    padding: 12px 16px;
+    border-radius: 20px;
+    padding: 10px 14px;
     display: flex;
     flex-direction: column;
     box-shadow: var(--shadow);
@@ -594,11 +599,11 @@ input:checked + .slider:before {
     background: transparent;
     border: none;
     color: var(--text-primary);
-    font-size: 16px;
+    font-size: 15px;
     outline: none;
     resize: none;
-    max-height: 200px;
-    padding: 8px 0;
+    max-height: 180px;
+    padding: 6px 0;
     font-family: inherit;
 }
 
@@ -621,8 +626,8 @@ input:checked + .slider:before {
 }
 
 .send-btn {
-    width: 32px;
-    height: 32px;
+    width: 30px;
+    height: 30px;
     background-color: var(--accent-color);
     border: none;
     border-radius: 50%;
@@ -632,7 +637,7 @@ input:checked + .slider:before {
     align-items: center;
     justify-content: center;
     transition: opacity 0.2s;
-    margin-bottom: 4px;
+    margin-bottom: 3px;
     flex-shrink: 0;
 }
 
@@ -868,6 +873,6 @@ input:checked + .slider:before {
     }
     
     .message-content {
-        max-width: 90%;
+        max-width: 88%;
     }
 }
