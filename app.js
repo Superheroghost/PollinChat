@@ -262,6 +262,14 @@ async function sendMessage() {
         scrollToBottom();
     } catch (error) {
         console.error('Error fetching AI response:', error);
+        
+        // Silently ignore timeout errors (524) - don't show error UI
+        if (error.message && error.message.includes('524')) {
+            contentElement.classList.remove('typing-indicator');
+            contentElement.innerHTML = marked.parse("Request timed out. Please try again.");
+            return;
+        }
+        
         contentElement.classList.remove('typing-indicator');
         
         let errorMessage = error.message || "Failed to connect to Pollinations AI.";
