@@ -285,9 +285,7 @@ async function sendMessage() {
     }
 }
 
-async function fetchAIResponse(messages, retryCount = 0) {
-    const MAX_RETRIES = 3;
-    
+async function fetchAIResponse(messages) {
     const model = modelSelector.value;
     const headers = {
         'Content-Type': 'application/json'
@@ -315,69 +313,18 @@ async function fetchAIResponse(messages, retryCount = 0) {
         };
     }
 
-    try {
-        // No timeout - let the request complete naturally
-        const response = await fetch(API_ENDPOINT, {
-            method: 'POST',
-            headers: headers,
-            body: JSON.stringify(body)
-        });
+    const response = await fetch(API_ENDPOINT, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(body)
+    });
 
-        if (!response.ok) {
-            const err = await response.json().catch(() => ({}));
-            const statusCode = response.status;
-            
-            // Handle 524 timeout error with retry (server-side timeout)
-            if (statusCode === 524 && retryCount < MAX_RETRIES) {
-                console.log(`Received 524 timeout, retrying... (attempt ${retryCount + 1}/${MAX_RETRIES})`);
-                await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
-                return fetchAIResponse(messages, retryCount + 1);
-            }
-            
-            // Handle other 5xx errors with retry using exponential backoff
-            if (statusCode >= 500 && statusCode < 600 && retryCount < MAX_RETRIES) {
-                console.log(`Server error ${statusCode}, retrying... (attempt ${retryCount + 1}/${MAX_RETRIES})`);
-                await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
-                return fetchAIResponse(messages, retryCount + 1);
-            }
-            
-            // Handle rate limiting with longer backoff
-            if (statusCode === 429 && retryCount < MAX_RETRIES) {
-                console.log(`Rate limited, retrying... (attempt ${retryCount + 1}/${MAX_RETRIES})`);
-                await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 2000));
-                return fetchAIResponse(messages, retryCount + 1);
-            }
-            
-            throw new Error(err.error?.message || `HTTP ${statusCode}: ${getErrorMessage(statusCode)}`);
-        }
-
-        return await response.json();
-    } catch (error) {
-        // Handle network errors with retry using exponential backoff
-        if ((error.message.includes('fetch') || error.message.includes('network') || error.name === 'TypeError') && retryCount < MAX_RETRIES) {
-            console.log(`Network error, retrying... (attempt ${retryCount + 1}/${MAX_RETRIES})`);
-            await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
-            return fetchAIResponse(messages, retryCount + 1);
-        }
-        
-        throw error;
+    if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error?.message || `HTTP ${response.status}`);
     }
-}
 
-// Helper function for user-friendly error messages
-function getErrorMessage(statusCode) {
-    const messages = {
-        400: 'Bad request. Please check your input.',
-        401: 'Unauthorized. Please check your API key.',
-        403: 'Forbidden. Access denied.',
-        404: 'Model not found.',
-        429: 'Too many requests. Please wait and try again.',
-        500: 'Server error. Please try again.',
-        502: 'Bad gateway. The server is temporarily unavailable.',
-        503: 'Service unavailable. Please try again later.',
-        524: 'Request timed out. The server took too long to respond.'
-    };
-    return messages[statusCode] || 'An unexpected error occurred.';
+    return await response.json();
 }
 
 function createNewChat(initialText = '') {
@@ -508,10 +455,6 @@ function renderMessage(msg, isPlaceholder = false) {
 
 function processCodeBlocks(container) {
     container.querySelectorAll('pre').forEach((pre) => {
-        // Skip if already processed using data attribute
-        if (pre.dataset.processed === 'true') return;
-        pre.dataset.processed = 'true';
-        
         const code = pre.querySelector('code');
         if (!code) return;
         
@@ -524,43 +467,18 @@ function processCodeBlocks(container) {
         header.className = 'code-header';
         header.innerHTML = `
             <span>${lang}</span>
-            <button class="copy-code-btn" title="Copy to clipboard"><i class="far fa-copy"></i> Copy</button>
+            <button class="copy-code-btn"><i class="far fa-copy"></i> Copy code</button>
         `;
         
-        const copyBtn = header.querySelector('.copy-code-btn');
-        copyBtn.onclick = async function() {
+        header.querySelector('.copy-code-btn').onclick = async function() {
             try {
                 await navigator.clipboard.writeText(code.innerText);
-                this.classList.add('copied');
                 this.innerHTML = '<i class="fas fa-check"></i> Copied!';
                 setTimeout(() => {
-                    this.classList.remove('copied');
-                    this.innerHTML = '<i class="far fa-copy"></i> Copy';
+                    this.innerHTML = '<i class="far fa-copy"></i> Copy code';
                 }, 2000);
             } catch (err) {
                 console.error('Failed to copy!', err);
-                // Fallback for older browsers
-                const textArea = document.createElement('textarea');
-                textArea.value = code.innerText;
-                textArea.style.position = 'fixed';
-                textArea.style.left = '-9999px';
-                document.body.appendChild(textArea);
-                textArea.select();
-                try {
-                    document.execCommand('copy');
-                    this.classList.add('copied');
-                    this.innerHTML = '<i class="fas fa-check"></i> Copied!';
-                    setTimeout(() => {
-                        this.classList.remove('copied');
-                        this.innerHTML = '<i class="far fa-copy"></i> Copy';
-                    }, 2000);
-                } catch (e) {
-                    this.innerHTML = '<i class="fas fa-times"></i> Failed';
-                    setTimeout(() => {
-                        this.innerHTML = '<i class="far fa-copy"></i> Copy';
-                    }, 2000);
-                }
-                document.body.removeChild(textArea);
             }
         };
         
