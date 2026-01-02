@@ -13,7 +13,7 @@ let state = {
     selectedImage: null, // Stores base64 of the image
     settings: JSON.parse(localStorage.getItem(STORAGE_KEY_SETTINGS)) || {
         apiKey: '',
-        theme: 'dark'
+        theme: 'light'
     }
 };
 
