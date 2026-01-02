@@ -16,7 +16,7 @@ A modern, feature-rich chat interface powered by [Pollinations.ai](https://polli
   - And many more!
 
 - 🖼️ **Vision Support**: Send images to vision-capable models for analysis
-- 💭 **Reasoning Models**: Advanced reasoning with models like DeepSpeak and Kimi K2
+- 💭 **Reasoning Models**: Advanced reasoning with models like Deepseek and Kimi K2
 - 💾 **Chat History**: Automatically saves your conversations locally
 - 🎨 **Theme Support**: Light, Dark, and System theme options
 - 📱 **Responsive Design**: Works seamlessly on desktop and mobile devices
@@ -96,7 +96,7 @@ Access settings by clicking the gear icon:
 - Midjourney
 
 ### Reasoning Models
-- DeepSpeak
+- Deepseek
 - Kimi K2 Thinking
 - Perplexity Reasoning
 - Gemini Large

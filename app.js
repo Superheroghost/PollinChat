@@ -25,7 +25,7 @@ const VISION_MODELS = [
 ];
 
 const REASONING_MODELS = [
-    'deepspeak', 'kimi-k2-thinking', 'perplexity-reasoning', 'gemini-large', 'openai-large'
+    'deepseek', 'kimi-k2-thinking', 'perplexity-reasoning', 'gemini-large', 'openai-large'
 ];
 
 // UI Elements
