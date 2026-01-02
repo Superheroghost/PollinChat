@@ -321,9 +321,10 @@ async function fetchAIResponse(messages) {
             body: JSON.stringify(body)
         });
 
-        // If timeout error (524), retry automatically
+        // If timeout error (524), wait briefly then retry automatically
         if (response.status === 524) {
-            console.log('Timeout (524) - retrying...');
+            console.log('Timeout (524) - retrying in 1 second...');
+            await new Promise(resolve => setTimeout(resolve, 1000));
             continue;
         }
 
