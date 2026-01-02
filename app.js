@@ -264,12 +264,6 @@ async function sendMessage() {
         console.error('Error fetching AI response:', error);
         contentElement.classList.remove('typing-indicator');
         
-        // Completely ignore timeout errors (524) - don't show anything
-        if (error.message && error.message.includes('524')) {
-            contentElement.innerHTML = '';
-            return;
-        }
-        
         let errorMessage = error.message || "Failed to connect to Pollinations AI.";
         let helpfulTip = "";
         
@@ -319,18 +313,27 @@ async function fetchAIResponse(messages) {
         };
     }
 
-    const response = await fetch(API_ENDPOINT, {
-        method: 'POST',
-        headers: headers,
-        body: JSON.stringify(body)
-    });
+    // Retry indefinitely on timeout (524) errors
+    while (true) {
+        const response = await fetch(API_ENDPOINT, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(body)
+        });
 
-    if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.error?.message || `HTTP ${response.status}`);
+        // If timeout error (524), retry automatically
+        if (response.status === 524) {
+            console.log('Timeout (524) - retrying...');
+            continue;
+        }
+
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.error?.message || `HTTP ${response.status}`);
+        }
+
+        return await response.json();
     }
-
-    return await response.json();
 }
 
 function createNewChat(initialText = '') {
