@@ -83,9 +83,9 @@ Access settings by clicking the gear icon:
 ## Supported Models
 
 ### Vision-Capable Models
-- OpenAI Fast (GPT-5 Mini)
-- OpenAI (GPT-5 Mini)
-- OpenAI Large (GPT-5.2)
+- OpenAI Fast
+- OpenAI
+- OpenAI Large
 - Claude Fast
 - Claude
 - Claude Large
