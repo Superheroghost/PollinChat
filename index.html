@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PollinChat — Advanced AI Studio</title>
+    <title>PollinChat</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css">
@@ -41,15 +41,9 @@
         <!-- Main Content -->
         <main class="main-content">
             <header class="top-bar">
-                <div class="top-bar-left">
-                    <button class="mobile-menu-btn" id="mobileMenuBtn">
-                        <i class="fas fa-bars"></i>
-                    </button>
-                    <div class="brand-logo">
-                        <img src="logo.png" alt="Logo">
-                        <span>PollinChat</span>
-                    </div>
-                </div>
+                <button class="mobile-menu-btn" id="mobileMenuBtn">
+                    <i class="fas fa-bars"></i>
+                </button>
                 <div class="model-selector-container">
                     <div id="reasoningControls" class="reasoning-controls" style="display: none;">
                         <label class="switch-container" id="thinkingToggleContainer">
@@ -99,8 +93,7 @@
                         <div class="logo-container">
                             <img src="logo.png" alt="Pollinations AI" class="welcome-logo">
                         </div>
-                        <h1 class="welcome-title">PollinChat</h1>
-                        <p class="welcome-subtitle">Explore the universe of intelligence.</p>
+                        <h1>PollinChat</h1>
                         <div class="suggestions">
                             <button class="suggestion-card" onclick="setInput('Write a Python script to scrape a website.')">
                                 <i class="fas fa-code"></i>
@@ -144,7 +137,7 @@
                             <i class="fas fa-paperclip"></i>
                         </button>
                         <input type="file" id="imageInput" accept="image/*" style="display: none;">
-                        <textarea id="chatInput" placeholder="Message Pollinations..." rows="1"></textarea>
+                        <textarea id="chatInput" placeholder="Message PollinChat..." rows="1"></textarea>
                         <button id="sendBtn" class="send-btn" disabled>
                             <i class="fas fa-arrow-up"></i>
                         </button>
@@ -175,6 +168,12 @@
                         <option value="light">Light</option>
                         <option value="system">System</option>
                     </select>
+                </div>
+                <div class="setting-group danger-zone">
+                    <label>Danger Zone</label>
+                    <button class="delete-all-btn" id="deleteAllChats">
+                        <i class="fas fa-trash-alt"></i> Delete All Chats
+                    </button>
                 </div>
             </div>
             <div class="modal-footer">
