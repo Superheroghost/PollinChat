@@ -18,10 +18,12 @@ A modern, feature-rich chat interface powered by [Pollinations.ai](https://polli
 - 🖼️ **Vision Support**: Send images to vision-capable models for analysis
 - 💭 **Reasoning Models**: Advanced reasoning with models like Deepseek and Kimi K2
 - 💾 **Chat History**: Automatically saves your conversations locally
-- 🎨 **Theme Support**: Light, Dark, and System theme options
+- 🎨 **Theme Support**: Choose between Light, Dark (Deep Midnight), and System theme options with beautiful glassmorphic UI
 - 📱 **Responsive Design**: Works seamlessly on desktop and mobile devices
-- 📝 **Markdown & Code Highlighting**: Beautiful rendering of formatted text and code blocks
-- 🔒 **Privacy First**: All data stored locally in your browser
+- 📝 **Markdown & Code Highlighting**: Beautiful rendering of formatted text and code blocks with syntax highlighting
+- 🎯 **Advanced Tools**: Google Search integration and code execution capabilities for supported models
+- 🔒 **Privacy First**: All data stored locally in your browser - no data sent to external servers except AI API calls
+- ✨ **Polished UI**: Modern Deep Midnight theme with smooth animations and refined interactions
 
 ## Getting Started
 

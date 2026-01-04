@@ -152,11 +152,22 @@ body {
     outline: none;
 }
 
-.new-chat-btn:hover {
+.new-chat-btn:hover:not(:focus) {
     background: var(--bg-primary);
     color: var(--text-primary);
     border-color: var(--accent-color);
     transform: translateY(-1px);
+    box-shadow: 0 0 15px var(--accent-glow);
+}
+
+.new-chat-btn:focus {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border-color: var(--border-hover);
+}
+
+.new-chat-btn:focus:hover {
+    border-color: var(--accent-color);
     box-shadow: 0 0 15px var(--accent-glow);
 }
 
@@ -1042,29 +1053,6 @@ input:checked + .slider:before { transform: translateX(14px); }
 }
 
 .save-btn:hover { background: var(--accent-hover); transform: translateY(-1px); }
-
-.delete-all-btn {
-    width: 100%;
-    padding: 12px;
-    background: rgba(239, 68, 68, 0.08);
-    border: 1px solid rgba(239, 68, 68, 0.2);
-    color: #ef4444;
-    border-radius: var(--radius-md);
-    font-weight: 700;
-    font-size: 14px;
-    cursor: pointer;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-}
-
-.delete-all-btn:hover {
-    background: #ef4444;
-    color: white;
-    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
-}
 
 /* Mobile Adaptability */
 @media (max-width: 768px) {

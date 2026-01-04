@@ -209,7 +209,6 @@ function setupEventListeners() {
         }
     };
 
-    document.getElementById('deleteAllChats').addEventListener('click', deleteAllHandler);
     document.getElementById('deleteAllSidebarBtn').addEventListener('click', deleteAllHandler);
 
     window.onclick = (e) => {
