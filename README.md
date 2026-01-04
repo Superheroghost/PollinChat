@@ -100,7 +100,7 @@ Access settings by clicking the gear icon:
 - Kimi K2 Thinking
 - Perplexity Reasoning
 - Gemini Large
-- OpenAI Large (GPT-5.2)
+- OpenAI Large
 
 ### Additional Models
 - Mistral
