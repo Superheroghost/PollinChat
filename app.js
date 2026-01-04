@@ -17,7 +17,8 @@ let state = {
     },
     settings: JSON.parse(localStorage.getItem(STORAGE_KEY_SETTINGS)) || {
         apiKey: '',
-        theme: 'light'
+        theme: 'light',
+        defaultModel: 'openai'
     }
 };
 
@@ -57,6 +58,7 @@ const welcomeScreen = document.getElementById('welcomeScreen');
 const settingsModal = document.getElementById('settingsModal');
 const apiKeyInput = document.getElementById('apiKey');
 const themeSelect = document.getElementById('themeSelect');
+const defaultModelSelect = document.getElementById('defaultModelSelect');
 const newChatBtn = document.getElementById('newChatBtn');
 const imageInput = document.getElementById('imageInput');
 const attachBtn = document.getElementById('attachBtn');
@@ -71,11 +73,71 @@ marked.setOptions({
 // App Initialization
 function init() {
     applyTheme(state.settings.theme);
+    
+    // Apply saved default model
+    if (state.settings.defaultModel) {
+        modelSelector.value = state.settings.defaultModel;
+    }
+    
+    // Initialize tool controls based on current model
+    updateModelControls();
+    
     renderChatHistory();
     setupEventListeners();
     
     // Auto-focus input
     chatInput.focus();
+}
+
+function updateModelControls() {
+    const model = modelSelector.value;
+    const isVision = VISION_MODELS.includes(model);
+    attachBtn.style.opacity = isVision ? '1' : '0.3';
+    attachBtn.title = isVision ? 'Attach image' : 'Selected model does not support images';
+    
+    // Update tools UI
+    const hasSearch = GOOGLE_SEARCH_MODELS.includes(model);
+    const hasCode = CODE_EXECUTION_MODELS.includes(model);
+    
+    // Auto-enable search for gemini-search and perplexity models
+    const shouldAutoEnableSearch = model === 'gemini-search' || model.startsWith('perplexity');
+    if (shouldAutoEnableSearch && hasSearch) {
+        state.toolsEnabled.search = true;
+    }
+    
+    searchToggle.style.display = hasSearch ? 'flex' : 'none';
+    codeToggle.style.display = hasCode ? 'flex' : 'none';
+    
+    searchToggle.classList.toggle('active', hasSearch && state.toolsEnabled.search);
+    codeToggle.classList.toggle('active', hasCode && state.toolsEnabled.code);
+
+    // Update reasoning UI
+    const isReasoning = REASONING_MODELS.includes(model);
+    reasoningControls.style.display = isReasoning ? 'flex' : 'none';
+    
+    if (isReasoning) {
+        const isEffortModel = (model === 'openai-large' || model === 'gemini-large');
+        reasoningEffort.style.display = isEffortModel ? 'block' : 'none';
+        
+        // Rebuild reasoning effort options for specific models
+        if (model === 'openai-large') {
+            reasoningEffort.innerHTML = `
+                <option value="none">None</option>
+                <option value="minimal">Minimal</option>
+                <option value="low">Low</option>
+                <option value="medium" selected>Medium</option>
+                <option value="high">High</option>
+                <option value="xhigh">X-High</option>
+            `;
+        } else if (model === 'gemini-large') {
+            reasoningEffort.innerHTML = `
+                <option value="low" selected>Low</option>
+                <option value="high">High</option>
+            `;
+        }
+
+        thinkingToggleContainer.style.display = 'flex';
+    }
 }
 
 function setupEventListeners() {
@@ -107,54 +169,7 @@ function setupEventListeners() {
     imageInput.addEventListener('change', handleImageSelect);
 
     modelSelector.addEventListener('change', () => {
-        const model = modelSelector.value;
-        const isVision = VISION_MODELS.includes(model);
-        attachBtn.style.opacity = isVision ? '1' : '0.3';
-        attachBtn.title = isVision ? 'Attach image' : 'Selected model does not support images';
-        
-        // Update tools UI
-        const hasSearch = GOOGLE_SEARCH_MODELS.includes(model);
-        const hasCode = CODE_EXECUTION_MODELS.includes(model);
-        
-        // Auto-enable search for gemini-search and perplexity models
-        const shouldAutoEnableSearch = model === 'gemini-search' || model.startsWith('perplexity');
-        if (shouldAutoEnableSearch && hasSearch) {
-            state.toolsEnabled.search = true;
-        }
-        
-        searchToggle.style.display = hasSearch ? 'flex' : 'none';
-        codeToggle.style.display = hasCode ? 'flex' : 'none';
-        
-        searchToggle.classList.toggle('active', hasSearch && state.toolsEnabled.search);
-        codeToggle.classList.toggle('active', hasCode && state.toolsEnabled.code);
-
-        // Update reasoning UI
-        const isReasoning = REASONING_MODELS.includes(model);
-        reasoningControls.style.display = isReasoning ? 'flex' : 'none';
-        
-        if (isReasoning) {
-            const isEffortModel = (model === 'openai-large' || model === 'gemini-large');
-            reasoningEffort.style.display = isEffortModel ? 'block' : 'none';
-            
-            // Rebuild reasoning effort options for specific models
-            if (model === 'openai-large') {
-                reasoningEffort.innerHTML = `
-                    <option value="none">None</option>
-                    <option value="minimal">Minimal</option>
-                    <option value="low">Low</option>
-                    <option value="medium" selected>Medium</option>
-                    <option value="high">High</option>
-                    <option value="xhigh">X-High</option>
-                `;
-            } else if (model === 'gemini-large') {
-                reasoningEffort.innerHTML = `
-                    <option value="low" selected>Low</option>
-                    <option value="high">High</option>
-                `;
-            }
-
-            thinkingToggleContainer.style.display = 'flex';
-        }
+        updateModelControls();
     });
 
     searchToggle.addEventListener('click', () => {
@@ -188,6 +203,7 @@ function setupEventListeners() {
     document.getElementById('settingsBtn').addEventListener('click', () => {
         apiKeyInput.value = state.settings.apiKey;
         themeSelect.value = state.settings.theme;
+        defaultModelSelect.value = state.settings.defaultModel || 'openai';
         settingsModal.style.display = 'flex';
     });
 
@@ -198,8 +214,11 @@ function setupEventListeners() {
     document.getElementById('saveSettings').addEventListener('click', () => {
         state.settings.apiKey = apiKeyInput.value.trim();
         state.settings.theme = themeSelect.value;
+        state.settings.defaultModel = defaultModelSelect.value;
         saveSettings();
         applyTheme(state.settings.theme);
+        modelSelector.value = state.settings.defaultModel;
+        updateModelControls();
         settingsModal.style.display = 'none';
     });
 
@@ -321,6 +340,68 @@ async function executeTool(name, args) {
     return { error: "Tool not implemented" };
 }
 
+// Generate chat title using AI
+async function generateChatTitle(chat) {
+    try {
+        // Get the first user message
+        const firstUserMsg = chat.messages.find(m => m.role === 'user');
+        if (!firstUserMsg) return;
+        
+        // Extract text from message (handle vision content arrays)
+        let messageText = '';
+        if (typeof firstUserMsg.content === 'string') {
+            messageText = firstUserMsg.content;
+        } else if (Array.isArray(firstUserMsg.content)) {
+            const textPart = firstUserMsg.content.find(p => p.type === 'text');
+            messageText = textPart ? textPart.text : '';
+        }
+        
+        if (!messageText || messageText.length < 3) return;
+        
+        const headers = {
+            'Content-Type': 'application/json'
+        };
+        
+        if (state.settings.apiKey) {
+            headers['Authorization'] = `Bearer ${state.settings.apiKey}`;
+        }
+        
+        const response = await fetch(API_ENDPOINT, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify({
+                model: 'openai', // Use GPT-5 Mini for title generation
+                messages: [
+                    {
+                        role: 'system',
+                        content: 'Generate a short, concise title (max 5 words) for a chat that starts with the following message. Only respond with the title, nothing else.'
+                    },
+                    {
+                        role: 'user',
+                        content: messageText.substring(0, 200) // Limit to first 200 chars
+                    }
+                ],
+                stream: false
+            })
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            const title = data.choices[0].message.content.trim();
+            
+            // Update chat title
+            if (title && title.length > 0 && title.length < 50) {
+                chat.title = title;
+                saveChats();
+                renderChatHistory();
+            }
+        }
+    } catch (error) {
+        console.error('Failed to generate chat title:', error);
+        // Silently fail - not critical
+    }
+}
+
 // Core Functions
 async function sendMessage() {
     const text = chatInput.value.trim();
@@ -428,6 +509,11 @@ async function sendMessage() {
 
         saveChats();
         scrollToBottom();
+        
+        // Generate title for new chats after first message
+        if (currentChat.messages.length === 2 && currentChat.title === 'New Chat') {
+            generateChatTitle(currentChat);
+        }
     } catch (error) {
         console.error('Error fetching AI response:', error);
         contentElement.classList.remove('placeholder');
