@@ -11,13 +11,17 @@ let state = {
     chats: JSON.parse(localStorage.getItem(STORAGE_KEY_CHATS)) || [],
     activeChatId: null,
     selectedImage: null, // Stores base64 of the image
+    toolsEnabled: {
+        search: true,
+        code: true
+    },
     settings: JSON.parse(localStorage.getItem(STORAGE_KEY_SETTINGS)) || {
         apiKey: '',
         theme: 'light'
     }
 };
 
-// Vision-capable models as per user request
+// Model Capabilities
 const VISION_MODELS = [
     'openai-fast', 'grok', 'openai', 'claude-fast', 'midjourney', 
     'claude', 'claude-large', 'gemini-large', 'openai-large', 
@@ -26,6 +30,14 @@ const VISION_MODELS = [
 
 const REASONING_MODELS = [
     'deepseek', 'kimi-k2-thinking', 'perplexity-reasoning', 'gemini-large', 'openai-large'
+];
+
+const GOOGLE_SEARCH_MODELS = [
+    'gemini', 'gemini-fast', 'gemini-large', 'gemini-search', 'perplexity-fast', 'perplexity-reasoning'
+];
+
+const CODE_EXECUTION_MODELS = [
+    'gemini', 'gemini-fast', 'gemini-search'
 ];
 
 // UI Elements
@@ -38,6 +50,8 @@ const modelSelector = document.getElementById('modelSelector');
 const reasoningControls = document.getElementById('reasoningControls');
 const thinkingToggle = document.getElementById('thinkingToggle');
 const reasoningEffort = document.getElementById('reasoningEffort');
+const searchToggle = document.getElementById('searchToggle');
+const codeToggle = document.getElementById('codeToggle');
 const thinkingToggleContainer = document.getElementById('thinkingToggleContainer');
 const welcomeScreen = document.getElementById('welcomeScreen');
 const settingsModal = document.getElementById('settingsModal');
@@ -50,13 +64,8 @@ const imagePreviewContainer = document.getElementById('imagePreviewContainer');
 
 // Initialize Markdown
 marked.setOptions({
-    highlight: function(code, lang) {
-        if (lang && hljs.getLanguage(lang)) {
-            return hljs.highlight(code, { language: lang }).value;
-        }
-        return hljs.highlightAuto(code).value;
-    },
-    breaks: true
+    breaks: true,
+    gfm: true
 });
 
 // App Initialization
@@ -103,29 +112,71 @@ function setupEventListeners() {
         attachBtn.style.opacity = isVision ? '1' : '0.3';
         attachBtn.title = isVision ? 'Attach image' : 'Selected model does not support images';
         
+        // Update tools UI
+        const hasSearch = GOOGLE_SEARCH_MODELS.includes(model);
+        const hasCode = CODE_EXECUTION_MODELS.includes(model);
+        
+        searchToggle.style.display = hasSearch ? 'flex' : 'none';
+        codeToggle.style.display = hasCode ? 'flex' : 'none';
+        
+        searchToggle.classList.toggle('active', hasSearch && state.toolsEnabled.search);
+        codeToggle.classList.toggle('active', hasCode && state.toolsEnabled.code);
+
         // Update reasoning UI
         const isReasoning = REASONING_MODELS.includes(model);
         reasoningControls.style.display = isReasoning ? 'flex' : 'none';
         
         if (isReasoning) {
-            const isOpenAILarge = model === 'openai-large';
-            reasoningEffort.style.display = isOpenAILarge ? 'block' : 'none';
-            // Show toggle for others, though openai-large can also use it if desired, 
-            // but prompt specifies reasoning_effort for openai-large
+            const isEffortModel = (model === 'openai-large' || model === 'gemini-large');
+            reasoningEffort.style.display = isEffortModel ? 'block' : 'none';
+            
+            // Rebuild reasoning effort options for specific models
+            if (model === 'openai-large') {
+                reasoningEffort.innerHTML = `
+                    <option value="none">None</option>
+                    <option value="minimal">Minimal</option>
+                    <option value="low">Low</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="high">High</option>
+                    <option value="xhigh">X-High</option>
+                `;
+            } else if (model === 'gemini-large') {
+                reasoningEffort.innerHTML = `
+                    <option value="low" selected>Low</option>
+                    <option value="high">High</option>
+                `;
+            }
+
             thinkingToggleContainer.style.display = 'flex';
         }
     });
 
+    searchToggle.addEventListener('click', () => {
+        state.toolsEnabled.search = !state.toolsEnabled.search;
+        searchToggle.classList.toggle('active', state.toolsEnabled.search);
+    });
+
+    codeToggle.addEventListener('click', () => {
+        state.toolsEnabled.code = !state.toolsEnabled.code;
+        codeToggle.classList.toggle('active', state.toolsEnabled.code);
+    });
+
     // Sidebar & Navigation
-    newChatBtn.addEventListener('click', createNewChat);
-
-    document.getElementById('mobileMenuBtn').addEventListener('click', () => {
-        sidebar.classList.add('open');
+    newChatBtn.addEventListener('click', () => {
+        createNewChat();
+        newChatBtn.blur();
     });
 
-    document.getElementById('mobileCloseBtn').addEventListener('click', () => {
-        sidebar.classList.remove('open');
-    });
+    const sidebarToggle = () => {
+        if (sidebar.classList.contains('closed')) {
+            // Prevent auto-focus highlighting when sidebar opens
+            document.activeElement?.blur();
+        }
+        sidebar.classList.toggle('closed');
+    };
+
+    document.getElementById('mobileMenuBtn').addEventListener('click', sidebarToggle);
+    document.getElementById('closeSidebarBtn').addEventListener('click', sidebarToggle);
 
     // Settings
     document.getElementById('settingsBtn').addEventListener('click', () => {
@@ -146,7 +197,7 @@ function setupEventListeners() {
         settingsModal.style.display = 'none';
     });
 
-    document.getElementById('deleteAllChats').addEventListener('click', () => {
+    const deleteAllHandler = () => {
         if (confirm('Are you sure you want to delete ALL chats? This action cannot be undone.')) {
             state.chats = [];
             state.activeChatId = null;
@@ -156,7 +207,10 @@ function setupEventListeners() {
             welcomeScreen.style.display = 'flex';
             settingsModal.style.display = 'none';
         }
-    });
+    };
+
+    document.getElementById('deleteAllChats').addEventListener('click', deleteAllHandler);
+    document.getElementById('deleteAllSidebarBtn').addEventListener('click', deleteAllHandler);
 
     window.onclick = (e) => {
         if (e.target === settingsModal) {
@@ -200,6 +254,68 @@ window.clearImagePreview = () => {
     if (!chatInput.value.trim()) sendBtn.disabled = true;
 };
 
+// Tool Definitions
+const TOOLS = [
+    {
+        type: "function",
+        function: {
+            name: "google_search",
+            description: "Performs a Google search to retrieve real-time information from the internet.",
+            parameters: {
+                type: "object",
+                properties: {
+                    query: { type: "string", description: "The search query." }
+                },
+                required: ["query"]
+            }
+        }
+    },
+    {
+        type: "function",
+        function: {
+            name: "code_execution",
+            description: "Executes Python code in a secure sandboxed environment to perform calculations or data processing.",
+            parameters: {
+                type: "object",
+                properties: {
+                    code: { type: "string", description: "The Python code to execute." }
+                },
+                required: ["code"]
+            }
+        }
+    }
+];
+
+// Tool Execution Logic
+async function executeTool(name, args) {
+    console.log(`Executing tool: ${name}`, args);
+    try {
+        if (name === 'google_search') {
+            const completion = await websim.chat.completions.create({
+                messages: [
+                    { role: "system", content: "You are a Google Search simulation. Provide a factual, concise summary of top search results for the user's query, including relevant snippets." },
+                    { role: "user", content: args.query }
+                ]
+            });
+            return { query: args.query, results: completion.content, provider: "Google" };
+        }
+        if (name === 'code_execution') {
+            // Simulate Python execution with an LLM call for logic or result generation
+            const completion = await websim.chat.completions.create({
+                messages: [
+                    { role: "system", content: "You are a Python code execution environment. Return the stdout or the result of the last expression of the provided code. If there are errors, return them. Format output as JSON with 'stdout' and 'result' fields." },
+                    { role: "user", content: args.code }
+                ],
+                json: true
+            });
+            return JSON.parse(completion.content);
+        }
+    } catch (err) {
+        return { error: err.message };
+    }
+    return { error: "Tool not implemented" };
+}
+
 // Core Functions
 async function sendMessage() {
     const text = chatInput.value.trim();
@@ -242,27 +358,74 @@ async function sendMessage() {
     const aiMsgPlaceholder = { role: 'assistant', content: '', id: Date.now() };
     const aiMsgElement = renderMessage(aiMsgPlaceholder, true);
     const contentElement = aiMsgElement.querySelector('.message-content');
-    contentElement.classList.add('typing-indicator');
 
     try {
-        const response = await fetchAIResponse(currentChat.messages);
-        contentElement.classList.remove('typing-indicator');
-        
-        // Render final response
-        const aiResponseText = response.choices[0].message.content;
-        currentChat.messages.push({ role: 'assistant', content: aiResponseText });
-        contentElement.innerHTML = marked.parse(aiResponseText);
-        
-        // Highlight code
-        contentElement.querySelectorAll('pre code').forEach((block) => {
-            hljs.highlightElement(block);
-        });
+        let isProcessing = true;
+        let aiResponse = null;
+
+        while (isProcessing) {
+            const response = await fetchAIResponse(currentChat.messages);
+            aiResponse = response.choices[0].message;
+            
+            // Capture reasoning/thinking if it exists
+            const reasoning = aiResponse.reasoning || aiResponse.thinking || null;
+
+            if (aiResponse.tool_calls && aiResponse.tool_calls.length > 0) {
+                // Handle tool calls
+                currentChat.messages.push(aiResponse);
+                
+                // Update UI to show we're using tools
+                const toolNames = aiResponse.tool_calls.map(tc => tc.function.name).join(', ');
+                const statusEl = contentElement.querySelector('.ai-thinking-status');
+                if (statusEl) {
+                    statusEl.innerHTML = `<i class="fas fa-tools fa-spin"></i> Using tools: ${toolNames}...`;
+                }
+
+                for (const toolCall of aiResponse.tool_calls) {
+                    const args = JSON.parse(toolCall.function.arguments);
+                    const result = await executeTool(toolCall.function.name, args);
+                    
+                    currentChat.messages.push({
+                        role: 'tool',
+                        tool_call_id: toolCall.id,
+                        name: toolCall.function.name,
+                        content: JSON.stringify(result)
+                    });
+                }
+                // Loop continues to let the AI respond to the tool outputs
+            } else {
+                // Final response
+                isProcessing = false;
+                contentElement.classList.remove('placeholder');
+                
+                const aiResponseText = aiResponse.content || "";
+                const msgData = { role: 'assistant', content: aiResponseText };
+                if (reasoning) msgData.reasoning = reasoning;
+                
+                currentChat.messages.push(msgData);
+                
+                let html = "";
+                if (reasoning) {
+                    html += `
+                        <details class="thinking-dropdown">
+                            <summary><i class="fas fa-brain"></i> Thinking Process</summary>
+                            <div class="thinking-content">${marked.parse(reasoning)}</div>
+                        </details>
+                    `;
+                }
+                html += marked.parse(aiResponseText);
+                contentElement.innerHTML = html;
+                
+                // Process code blocks for syntax highlighting and copy buttons
+                processCodeBlocks(contentElement);
+            }
+        }
 
         saveChats();
         scrollToBottom();
     } catch (error) {
         console.error('Error fetching AI response:', error);
-        contentElement.classList.remove('typing-indicator');
+        contentElement.classList.remove('placeholder');
         
         let errorMessage = error.message || "Failed to connect to Pollinations AI.";
         let helpfulTip = "";
@@ -295,15 +458,35 @@ async function fetchAIResponse(messages) {
         headers['Authorization'] = `Bearer ${state.settings.apiKey}`;
     }
 
+    // Filter tools based on model capabilities and UI toggles
+    let availableTools = TOOLS.filter(tool => {
+        const name = tool.function.name;
+        if (name === 'google_search') {
+            return GOOGLE_SEARCH_MODELS.includes(model) && state.toolsEnabled.search;
+        }
+        if (name === 'code_execution') {
+            return CODE_EXECUTION_MODELS.includes(model) && state.toolsEnabled.code;
+        }
+        return false; 
+    });
+
+    // Gemini restriction: Cannot mix search tools with other function calls in a single request on Vertex AI
+    if (model.toLowerCase().includes('gemini') && availableTools.length > 1) {
+        // If both are toggled on, prioritize Google Search to avoid the "Multiple tools" error
+        availableTools = availableTools.filter(t => t.function.name === 'google_search');
+    }
+
     const body = {
         model: model,
         messages: messages,
-        stream: false
+        stream: false,
+        tools: availableTools.length > 0 ? availableTools : undefined,
+        tool_choice: availableTools.length > 0 ? "auto" : undefined
     };
 
     // Add reasoning parameters if applicable
     if (REASONING_MODELS.includes(model)) {
-        if (model === 'openai-large') {
+        if (model === 'openai-large' || model === 'gemini-large') {
             body.reasoning_effort = reasoningEffort.value;
         }
         
@@ -339,9 +522,13 @@ async function fetchAIResponse(messages) {
 
 function createNewChat(initialText = '') {
     const id = Date.now().toString();
+    const title = (typeof initialText === 'string' && initialText.trim()) 
+        ? (initialText.trim().substring(0, 30) + '...') 
+        : 'New Chat';
+        
     const newChat = {
         id,
-        title: initialText ? (initialText.substring(0, 30) + '...') : 'New Chat',
+        title: title,
         messages: [],
         timestamp: Date.now()
     };
@@ -355,7 +542,7 @@ function createNewChat(initialText = '') {
     welcomeScreen.style.display = 'flex';
     
     if (window.innerWidth <= 768) {
-        sidebar.classList.remove('open');
+        sidebar.classList.add('closed');
     }
 }
 
@@ -414,7 +601,7 @@ function loadChat(id) {
     }
 
     if (window.innerWidth <= 768) {
-        sidebar.classList.remove('open');
+        sidebar.classList.add('closed');
     }
     
     scrollToBottom();
@@ -433,11 +620,27 @@ function renderMessage(msg, isPlaceholder = false) {
     }
     
     const content = document.createElement('div');
-    content.className = 'message-content';
+    content.className = 'message-content' + (isPlaceholder ? ' placeholder' : '');
     
     if (isPlaceholder) {
-        content.innerHTML = '<div class="typing-indicator"><span></span><span></span><span></span></div>';
+        content.innerHTML = `
+            <div class="ai-thinking-status"></div>
+            <div class="typing-indicator"><span></span><span></span><span></span></div>
+        `;
     } else {
+        let html = "";
+        
+        // Add Reasoning/Thinking block if available
+        if (msg.reasoning || msg.thinking) {
+            const reasoningText = msg.reasoning || msg.thinking;
+            html += `
+                <details class="thinking-dropdown">
+                    <summary><i class="fas fa-brain"></i> Thinking Process</summary>
+                    <div class="thinking-content">${marked.parse(reasoningText)}</div>
+                </details>
+            `;
+        }
+
         // Handle vision content (array of objects)
         if (Array.isArray(msg.content)) {
             let textPart = "";
@@ -446,10 +649,12 @@ function renderMessage(msg, isPlaceholder = false) {
                 if (part.type === 'text') textPart += part.text;
                 if (part.type === 'image_url') imagePart += `<div class="msg-image-wrap"><img src="${part.image_url.url}" class="user-uploaded-image" /></div>`;
             });
-            content.innerHTML = imagePart + marked.parse(textPart);
+            html += imagePart + marked.parse(textPart);
         } else {
-            content.innerHTML = marked.parse(msg.content || "");
+            html += marked.parse(msg.content || "");
         }
+        
+        content.innerHTML = html;
         
         // Enhance code blocks and highlight
         processCodeBlocks(content);
@@ -465,34 +670,50 @@ function renderMessage(msg, isPlaceholder = false) {
 
 function processCodeBlocks(container) {
     container.querySelectorAll('pre').forEach((pre) => {
+        // Prevent duplicate headers
+        if (pre.querySelector('.code-header')) return;
+
         const code = pre.querySelector('code');
         if (!code) return;
         
-        // Get language
+        // Get language for label
         const langClass = Array.from(code.classList).find(c => c.startsWith('language-'));
-        const lang = langClass ? langClass.replace('language-', '') : 'code';
+        const lang = langClass ? langClass.replace('language-', '') : 'text';
         
-        // Create header
+        // Create header with Copy button
         const header = document.createElement('div');
         header.className = 'code-header';
-        header.innerHTML = `
-            <span>${lang}</span>
-            <button class="copy-code-btn"><i class="far fa-copy"></i> Copy code</button>
-        `;
         
-        header.querySelector('.copy-code-btn').onclick = async function() {
+        const label = document.createElement('span');
+        label.textContent = lang;
+        
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'copy-code-btn';
+        copyBtn.innerHTML = '<i class="far fa-copy"></i> Copy code';
+        
+        copyBtn.onclick = async (e) => {
+            e.preventDefault();
+            const textToCopy = code.innerText;
             try {
-                await navigator.clipboard.writeText(code.innerText);
-                this.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                await navigator.clipboard.writeText(textToCopy);
+                copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                copyBtn.classList.add('copied');
                 setTimeout(() => {
-                    this.innerHTML = '<i class="far fa-copy"></i> Copy code';
+                    copyBtn.innerHTML = '<i class="far fa-copy"></i> Copy code';
+                    copyBtn.classList.remove('copied');
                 }, 2000);
             } catch (err) {
-                console.error('Failed to copy!', err);
+                console.error('Copy failed', err);
             }
         };
         
+        header.appendChild(label);
+        header.appendChild(copyBtn);
+        
+        // Insert header before the code element
         pre.insertBefore(header, code);
+        
+        // Apply syntax highlighting
         hljs.highlightElement(code);
     });
 }
