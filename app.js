@@ -12,8 +12,8 @@ let state = {
     activeChatId: null,
     selectedImage: null, // Stores base64 of the image
     toolsEnabled: {
-        search: true,
-        code: true
+        search: false,
+        code: false
     },
     settings: JSON.parse(localStorage.getItem(STORAGE_KEY_SETTINGS)) || {
         apiKey: '',
@@ -115,6 +115,12 @@ function setupEventListeners() {
         // Update tools UI
         const hasSearch = GOOGLE_SEARCH_MODELS.includes(model);
         const hasCode = CODE_EXECUTION_MODELS.includes(model);
+        
+        // Auto-enable search for gemini-search and perplexity models
+        const shouldAutoEnableSearch = model === 'gemini-search' || model.startsWith('perplexity');
+        if (shouldAutoEnableSearch && hasSearch) {
+            state.toolsEnabled.search = true;
+        }
         
         searchToggle.style.display = hasSearch ? 'flex' : 'none';
         codeToggle.style.display = hasCode ? 'flex' : 'none';

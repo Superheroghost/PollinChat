@@ -598,6 +598,7 @@ input:checked + .slider:before { transform: translateX(14px); }
 .chat-container {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     display: flex;
     flex-direction: column;
     scroll-behavior: smooth;
@@ -611,12 +612,17 @@ input:checked + .slider:before { transform: translateX(14px); }
     display: flex;
     flex-direction: column;
     gap: 24px;
+    overflow-x: hidden;
 }
 
 .message {
     display: flex;
     gap: 16px;
-    max-width: 90%;
+    max-width: 100%;
+}
+
+.message.ai {
+    max-width: 85%;
 }
 
 .message.user {
@@ -653,6 +659,9 @@ input:checked + .slider:before { transform: translateX(14px); }
     border-radius: var(--radius-lg);
     position: relative;
     box-shadow: var(--shadow-sm);
+    max-width: 100%;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 .user .message-content {
@@ -690,8 +699,9 @@ input:checked + .slider:before { transform: translateX(14px); }
     border-radius: var(--radius-md);
     margin: 16px 0;
     border: 1px solid #30363d;
-    overflow: visible;
+    overflow: hidden;
     position: relative;
+    max-width: 100%;
 }
 
 .code-header {
