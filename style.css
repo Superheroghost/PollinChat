@@ -168,6 +168,7 @@ body {
 
 .new-chat-btn:focus:hover {
     border-color: var(--accent-color);
+    transform: translateY(-1px);
     box-shadow: 0 0 15px var(--accent-glow);
 }
 
@@ -177,7 +178,11 @@ body {
     transition: color 0.2s;
 }
 
-.new-chat-btn:hover i {
+.new-chat-btn:hover:not(:focus) i {
+    color: var(--accent-color);
+}
+
+.new-chat-btn:focus:hover i {
     color: var(--accent-color);
 }
 
