@@ -418,7 +418,7 @@ async function sendMessage() {
 
     // Ensure we have an active chat
     if (!state.activeChatId) {
-        createNewChat(text || "Image Inquiry");
+        createNewChat();
     }
 
     const currentChat = state.chats.find(c => c.id === state.activeChatId);
@@ -613,9 +613,8 @@ async function fetchAIResponse(messages) {
 
 function createNewChat(initialText = '') {
     const id = Date.now().toString();
-    const title = (typeof initialText === 'string' && initialText.trim()) 
-        ? (initialText.trim().substring(0, 30) + '...') 
-        : 'New Chat';
+    // Always start with 'New Chat', let AI generate the title after first message
+    const title = 'New Chat';
         
     const newChat = {
         id,
