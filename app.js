@@ -6,37 +6,6 @@ const API_ENDPOINT = 'https://gen.pollinations.ai/v1/chat/completions';
 const STORAGE_KEY_CHATS = 'pollinations_chats';
 const STORAGE_KEY_SETTINGS = 'pollinations_settings';
 
-// Firebase Configuration
-// Shared Firebase project for PollinChat cloud sync
-const firebaseConfig = {
-    apiKey: "AIzaSyBvH8Y7fZN9mXx4qK5jP2wL3nR6tU8vC9s",
-    authDomain: "pollinchat-sync.firebaseapp.com",
-    projectId: "pollinchat-sync",
-    storageBucket: "pollinchat-sync.appspot.com",
-    messagingSenderId: "987654321098",
-    appId: "1:987654321098:web:abc123def456ghi789"
-};
-
-// Initialize Firebase
-let firebaseApp = null;
-let auth = null;
-let db = null;
-let currentUser = null;
-
-// Initialize Firebase
-try {
-    if (typeof firebase !== 'undefined') {
-        firebaseApp = firebase.initializeApp(firebaseConfig);
-        auth = firebase.auth();
-        db = firebase.firestore();
-        console.log('Firebase initialized successfully');
-    }
-} catch (error) {
-    console.error('Firebase initialization error:', error.message);
-    // Gracefully degrade to local-only storage
-}
-
-
 // State management
 let state = {
     chats: JSON.parse(localStorage.getItem(STORAGE_KEY_CHATS)) || [],
@@ -94,206 +63,12 @@ const newChatBtn = document.getElementById('newChatBtn');
 const imageInput = document.getElementById('imageInput');
 const attachBtn = document.getElementById('attachBtn');
 const imagePreviewContainer = document.getElementById('imagePreviewContainer');
-const accountBtn = document.getElementById('accountBtn');
-const accountStatus = document.getElementById('accountStatus');
-const syncIndicator = document.getElementById('syncIndicator');
-const googleSignInBtn = document.getElementById('googleSignInBtn');
-const googleSignOutBtn = document.getElementById('googleSignOutBtn');
-const syncStatus = document.getElementById('syncStatus');
 
 // Initialize Markdown
 marked.setOptions({
     breaks: true,
     gfm: true
 });
-
-// ===== GOOGLE AUTHENTICATION & CLOUD SYNC =====
-
-// Sign in with Google
-async function signInWithGoogle() {
-    if (!auth) {
-        showFirebaseConfigNotice();
-        return;
-    }
-    
-    try {
-        const provider = new firebase.auth.GoogleAuthProvider();
-        const result = await auth.signInWithPopup(provider);
-        currentUser = result.user;
-        
-        // Sync local data to cloud on first sign-in
-        await syncToCloud();
-        
-        updateAccountUI(currentUser);
-        updateSyncSettingsUI(true);
-        
-    } catch (error) {
-        console.error('Sign-in error:', error);
-        alert('Failed to sign in with Google: ' + error.message);
-    }
-}
-
-// Sign out
-async function signOut() {
-    if (!auth) return;
-    
-    try {
-        await auth.signOut();
-        currentUser = null;
-        updateAccountUI(null);
-        updateSyncSettingsUI(false);
-    } catch (error) {
-        console.error('Sign-out error:', error);
-        alert('Failed to sign out: ' + error.message);
-    }
-}
-
-// Sync local data to cloud
-async function syncToCloud() {
-    if (!currentUser || !db) return;
-    
-    try {
-        syncIndicator.style.display = 'flex';
-        syncIndicator.classList.add('syncing');
-        syncIndicator.innerHTML = '<i class="fas fa-sync-alt"></i>';
-        
-        const userDoc = db.collection('users').doc(currentUser.uid);
-        
-        // Upload chats
-        if (state.chats.length > 0) {
-            await userDoc.collection('chats').doc('data').set({
-                chats: state.chats,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
-            });
-        }
-        
-        // Upload settings
-        await userDoc.collection('settings').doc('data').set({
-            settings: state.settings,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        
-        syncIndicator.classList.remove('syncing');
-        syncIndicator.innerHTML = '<i class="fas fa-check-circle"></i>';
-        
-        console.log('Data synced to cloud');
-    } catch (error) {
-        console.error('Sync error:', error);
-        syncIndicator.innerHTML = '<i class="fas fa-exclamation-circle"></i>';
-    }
-}
-
-// Sync data from cloud to local
-async function syncFromCloud() {
-    if (!currentUser || !db) return;
-    
-    try {
-        syncIndicator.style.display = 'flex';
-        syncIndicator.classList.add('syncing');
-        syncIndicator.innerHTML = '<i class="fas fa-sync-alt"></i>';
-        
-        const userDoc = db.collection('users').doc(currentUser.uid);
-        
-        // Download chats
-        const chatsSnapshot = await userDoc.collection('chats').doc('data').get();
-        if (chatsSnapshot.exists) {
-            const cloudData = chatsSnapshot.data();
-            if (cloudData.chats) {
-                state.chats = cloudData.chats;
-                saveChats();
-                renderChatHistory();
-                
-                // Load active chat if exists
-                if (state.activeChatId) {
-                    loadChat(state.activeChatId);
-                }
-            }
-        }
-        
-        // Download settings
-        const settingsSnapshot = await userDoc.collection('settings').doc('data').get();
-        if (settingsSnapshot.exists) {
-            const cloudData = settingsSnapshot.data();
-            if (cloudData.settings) {
-                state.settings = cloudData.settings;
-                saveSettings();
-                applyTheme(state.settings.theme);
-                modelSelector.value = state.settings.defaultModel;
-                updateModelControls();
-            }
-        }
-        
-        syncIndicator.classList.remove('syncing');
-        syncIndicator.innerHTML = '<i class="fas fa-check-circle"></i>';
-        
-        console.log('Data synced from cloud');
-    } catch (error) {
-        console.error('Sync error:', error);
-        syncIndicator.innerHTML = '<i class="fas fa-exclamation-circle"></i>';
-    }
-}
-
-// Update account UI
-function updateAccountUI(user) {
-    if (user) {
-        accountBtn.classList.add('signed-in');
-        accountStatus.textContent = user.displayName || user.email;
-        syncIndicator.style.display = 'flex';
-    } else {
-        accountBtn.classList.remove('signed-in');
-        accountStatus.textContent = 'Sign in with Google';
-        syncIndicator.style.display = 'none';
-    }
-}
-
-// Update sync settings UI in modal
-function updateSyncSettingsUI(isSignedIn) {
-    if (isSignedIn) {
-        googleSignInBtn.style.display = 'none';
-        googleSignOutBtn.style.display = 'flex';
-        syncStatus.className = 'sync-status success';
-        syncStatus.innerHTML = `
-            <p style="color: var(--accent-color); font-size: 13px;">
-                <i class="fas fa-check-circle"></i> 
-                Signed in as ${currentUser.displayName || currentUser.email}
-            </p>
-            <p style="color: var(--text-muted); font-size: 12px; margin-top: 4px;">
-                Your chats and settings are being synced across devices.
-            </p>
-        `;
-    } else {
-        googleSignInBtn.style.display = 'flex';
-        googleSignOutBtn.style.display = 'none';
-        syncStatus.className = 'sync-status';
-        syncStatus.innerHTML = `
-            <p style="color: var(--text-muted); font-size: 13px;">
-                Sign in with Google to sync your chats and settings across devices.
-            </p>
-        `;
-    }
-}
-
-// Show Firebase config notice
-function showFirebaseConfigNotice() {
-    alert('Unable to connect to cloud sync service.\n\nThis could be due to:\n- Network connectivity issues\n- Ad blockers blocking Firebase\n- Browser privacy settings\n\nYour data will continue to be stored locally in your browser. You can try again later or check your browser settings.');
-}
-
-// Listen to auth state changes
-if (auth) {
-    auth.onAuthStateChanged(async (user) => {
-        currentUser = user;
-        updateAccountUI(user);
-        
-        if (user) {
-            // Sync from cloud when user signs in
-            await syncFromCloud();
-            updateSyncSettingsUI(true);
-        } else {
-            updateSyncSettingsUI(false);
-        }
-    });
-}
-
 
 // App Initialization
 function init() {
@@ -460,24 +235,6 @@ function setupEventListeners() {
     };
 
     document.getElementById('deleteAllSidebarBtn').addEventListener('click', deleteAllHandler);
-
-    // Google Account handlers
-    accountBtn.addEventListener('click', () => {
-        if (currentUser) {
-            // Show settings modal when already signed in
-            apiKeyInput.value = state.settings.apiKey;
-            themeSelect.value = state.settings.theme;
-            defaultModelSelect.value = state.settings.defaultModel || 'openai';
-            settingsModal.style.display = 'flex';
-        } else {
-            // Sign in if not signed in
-            signInWithGoogle();
-        }
-    });
-    
-    googleSignInBtn.addEventListener('click', signInWithGoogle);
-    googleSignOutBtn.addEventListener('click', signOut);
-
 
     window.onclick = (e) => {
         if (e.target === settingsModal) {
@@ -1063,29 +820,11 @@ function scrollToBottom() {
 // State Persistence
 function saveChats() {
     localStorage.setItem(STORAGE_KEY_CHATS, JSON.stringify(state.chats));
-    
-    // Auto-sync to cloud if user is signed in
-    if (currentUser && db) {
-        // Debounce the sync to avoid too many writes
-        if (window.syncTimeout) clearTimeout(window.syncTimeout);
-        window.syncTimeout = setTimeout(() => {
-            syncToCloud().catch(err => console.error('Auto-sync failed:', err));
-        }, 2000);
-    }
 }
 
 function saveSettings() {
     localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(state.settings));
-    
-    // Auto-sync to cloud if user is signed in
-    if (currentUser && db) {
-        if (window.syncTimeout) clearTimeout(window.syncTimeout);
-        window.syncTimeout = setTimeout(() => {
-            syncToCloud().catch(err => console.error('Auto-sync failed:', err));
-        }, 2000);
-    }
 }
-
 
 function applyTheme(theme) {
     if (theme === 'system') {
