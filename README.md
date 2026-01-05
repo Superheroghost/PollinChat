@@ -18,11 +18,12 @@ A modern, feature-rich chat interface powered by [Pollinations.ai](https://polli
 - 🖼️ **Vision Support**: Send images to vision-capable models for analysis
 - 💭 **Reasoning Models**: Advanced reasoning with models like Deepseek and Kimi K2
 - 💾 **Chat History**: Automatically saves your conversations locally
+- ☁️ **Cloud Sync**: Sign in with Google to sync chats and settings across multiple devices
 - 🎨 **Theme Support**: Choose between Light, Dark (Deep Midnight), and System theme options with beautiful glassmorphic UI
 - 📱 **Responsive Design**: Works seamlessly on desktop and mobile devices
 - 📝 **Markdown & Code Highlighting**: Beautiful rendering of formatted text and code blocks with syntax highlighting
 - 🎯 **Advanced Tools**: Google Search integration and code execution capabilities for supported models
-- 🔒 **Privacy First**: All data stored locally in your browser - no data sent to external servers except AI API calls
+- 🔒 **Privacy First**: All data stored locally in your browser - no data sent to external servers except AI API calls (or optionally synced to your private Firebase account)
 - ✨ **Polished UI**: Modern Deep Midnight theme with smooth animations and refined interactions
 
 ## Getting Started
@@ -80,6 +81,8 @@ For vision-capable models:
 Access settings by clicking the gear icon:
 - **API Key**: Required for all models
 - **Theme**: Choose between Light, Dark, or System theme
+- **Default Model**: Set your preferred AI model
+- **Cloud Sync**: Sign in with Google to automatically sync your data across devices (no setup required!)
 - **Delete All Chats**: Clear all conversation history
 
 ## Supported Models
@@ -121,12 +124,22 @@ Access settings by clicking the gear icon:
 
 ## Browser Storage
 
-PollinChat uses browser localStorage to save:
-- Chat history
-- User settings
-- Theme preferences
+PollinChat stores your data in two ways:
 
-No data is sent to any server except for AI completions via the Pollinations API.
+1. **Local Storage (Default)**: All chats and settings are saved in your browser's localStorage
+2. **Cloud Sync (Optional)**: Sign in with your Google account to automatically sync your data across all your devices
+
+### Using Cloud Sync
+
+Simply click the "Sign in with Google" button in the sidebar or settings. No additional setup required! Your data will be securely stored in the cloud and automatically synced across any device where you sign in with the same Google account.
+
+**Benefits of Cloud Sync:**
+- Access your chats from any device
+- Automatic backup of your conversations
+- Seamless switching between devices
+- Your data remains private and encrypted
+
+No data is sent to any server except for AI completions via the Pollinations API and (if you enable it) your encrypted data to secure cloud storage.
 
 ## Contributing
 
