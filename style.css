@@ -608,7 +608,7 @@ input:checked + .slider:before { transform: translateX(14px); }
     width: 100%;
     max-width: var(--max-chat-width);
     margin: 0 auto;
-    padding: 32px 24px 100px;
+    padding: 32px 24px 200px;
     display: flex;
     flex-direction: column;
     gap: 24px;
@@ -1087,6 +1087,8 @@ input:checked + .slider:before { transform: translateX(14px); }
     .suggestions { grid-template-columns: 1fr; }
     
     .message { max-width: 95%; }
+    
+    .messages-list { padding: 32px 12px 250px; }
     
     .input-area { padding: 0 12px 12px; }
     
