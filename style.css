@@ -1077,6 +1077,7 @@ input:checked + .slider:before { transform: translateX(14px); }
         width: 100%;
         max-width: 300px;
         box-shadow: var(--shadow-xl);
+        z-index: 1100;
     }
 
     .sidebar.closed {
