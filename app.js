@@ -3,15 +3,8 @@ import hljs from 'highlight.js';
 
 // Configuration
 const API_ENDPOINT = 'https://gen.pollinations.ai/v1/chat/completions';
-const MODELS_ENDPOINT = 'https://gen.pollinations.ai/text/models';
 const STORAGE_KEY_CHATS = 'pollinations_chats';
 const STORAGE_KEY_SETTINGS = 'pollinations_settings';
-
-// Start fetching models immediately when script loads (before DOM ready)
-const modelsPromise = fetch(MODELS_ENDPOINT).then(r => r.json()).catch(e => {
-    console.error('Error fetching models:', e);
-    return [];
-});
 
 // State management
 let state = {
@@ -26,18 +19,27 @@ let state = {
         apiKey: '',
         theme: 'light',
         defaultModel: 'openai'
-    },
-    modelsData: [] // Will store fetched models data
+    }
 };
 
-// Model Capabilities - These will be populated dynamically from the API
-let VISION_MODELS = [];
-let REASONING_MODELS = [];
-let GOOGLE_SEARCH_MODELS = [];
-let CODE_EXECUTION_MODELS = [];
+// Model Capabilities
+const VISION_MODELS = [
+    'openai-fast', 'grok', 'openai', 'claude-fast', 'midjourney', 
+    'claude', 'claude-large', 'gemini-large', 'openai-large', 
+    'gemini', 'gemini-search'
+];
 
-// Models that have reasoning_effort parameter (not just thinking toggle)
-const REASONING_EFFORT_MODELS = ['openai-large', 'gemini-large'];
+const REASONING_MODELS = [
+    'deepseek', 'kimi-k2-thinking', 'perplexity-reasoning', 'gemini-large', 'openai-large'
+];
+
+const GOOGLE_SEARCH_MODELS = [
+    'gemini', 'gemini-fast', 'gemini-large', 'gemini-search', 'perplexity-fast', 'perplexity-reasoning'
+];
+
+const CODE_EXECUTION_MODELS = [
+    'gemini', 'gemini-fast', 'gemini-search'
+];
 
 // UI Elements
 const sidebar = document.getElementById('sidebar');
@@ -69,14 +71,11 @@ marked.setOptions({
 });
 
 // App Initialization
-async function init() {
+function init() {
     applyTheme(state.settings.theme);
     
-    // Fetch and populate models from API
-    await fetchAndPopulateModels();
-    
     // Apply saved default model
-    if (state.settings.defaultModel && modelSelector.querySelector(`option[value="${state.settings.defaultModel}"]`)) {
+    if (state.settings.defaultModel) {
         modelSelector.value = state.settings.defaultModel;
     }
     
@@ -90,109 +89,13 @@ async function init() {
     chatInput.focus();
 }
 
-// Fallback models in case API fails
-const FALLBACK_MODELS = [
-    { name: 'openai', description: 'OpenAI GPT-4o Mini' },
-    { name: 'openai-large', description: 'OpenAI o3', reasoning: true },
-    { name: 'gemini', description: 'Google Gemini 2.0 Flash' },
-    { name: 'gemini-large', description: 'Google Gemini 2.5 Pro', reasoning: true },
-    { name: 'claude', description: 'Anthropic Claude Sonnet' }
-];
-
-// Fetch models from API and populate selectors
-async function fetchAndPopulateModels() {
-    try {
-        // Use the pre-fetched models promise for instant loading
-        const models = await modelsPromise;
-        
-        if (!models || models.length === 0) {
-            console.warn('No models received from API, using fallback models');
-            processModels(FALLBACK_MODELS);
-            return;
-        }
-        
-        processModels(models);
-        
-    } catch (error) {
-        console.error('Error fetching models:', error);
-        // Fallback to static models if API fails
-        processModels(FALLBACK_MODELS);
-    }
-}
-
-// Process models and populate UI
-function processModels(models) {
-    state.modelsData = models;
-    
-    // Clear existing capability arrays
-    VISION_MODELS = [];
-    REASONING_MODELS = [];
-    GOOGLE_SEARCH_MODELS = [];
-    CODE_EXECUTION_MODELS = [];
-    
-    // Populate capability arrays based on API response
-    models.forEach(model => {
-        const modelName = model.name;
-        
-        // Vision support - check if model supports input image
-        if (model.vision === true || model.input_image === true) {
-            VISION_MODELS.push(modelName);
-        }
-        
-        // Reasoning support - check if model supports reasoning/thinking
-        if (model.reasoning === true || model.thinking === true) {
-            REASONING_MODELS.push(modelName);
-        }
-        
-        // Tools support - only add for openai-large and gemini-large models
-        // as per requirements: "only keep the tools (code execution and search) in the models specified previously"
-        if (REASONING_EFFORT_MODELS.includes(modelName)) {
-            // Check for search support from API
-            if (model.tools?.includes('google_search') || model.tools?.includes('search')) {
-                GOOGLE_SEARCH_MODELS.push(modelName);
-            }
-            // Check for code execution support from API
-            if (model.tools?.includes('code_execution') || model.tools?.includes('code')) {
-                CODE_EXECUTION_MODELS.push(modelName);
-            }
-        }
-    });
-    
-    // Populate model selectors
-    populateModelSelector(modelSelector, models);
-    populateModelSelector(defaultModelSelect, models);
-}
-
-// Populate a select element with model options
-function populateModelSelector(selectElement, models) {
-    // Save current selection
-    const currentValue = selectElement.value;
-    
-    // Clear existing options
-    selectElement.innerHTML = '';
-    
-    // Add options from API data
-    models.forEach(model => {
-        const option = document.createElement('option');
-        option.value = model.name; // Use model ID for API requests
-        option.textContent = model.description || model.name; // Show description as display name
-        selectElement.appendChild(option);
-    });
-    
-    // Restore selection if still valid
-    if (currentValue && selectElement.querySelector(`option[value="${currentValue}"]`)) {
-        selectElement.value = currentValue;
-    }
-}
-
-// Initialize custom model select dropdown
 function updateModelControls() {
     const model = modelSelector.value;
     const isVision = VISION_MODELS.includes(model);
     attachBtn.style.opacity = isVision ? '1' : '0.3';
     attachBtn.title = isVision ? 'Attach image' : 'Selected model does not support images';
     
-    // Update tools UI - only show for models that support them (from API)
+    // Update tools UI
     const hasSearch = GOOGLE_SEARCH_MODELS.includes(model);
     const hasCode = CODE_EXECUTION_MODELS.includes(model);
     
@@ -210,13 +113,10 @@ function updateModelControls() {
 
     // Update reasoning UI
     const isReasoning = REASONING_MODELS.includes(model);
-    const isEffortModel = REASONING_EFFORT_MODELS.includes(model);
-    
-    // Show reasoning controls if model supports reasoning/thinking
     reasoningControls.style.display = isReasoning ? 'flex' : 'none';
     
     if (isReasoning) {
-        // Only show reasoning effort dropdown for openai-large and gemini-large
+        const isEffortModel = (model === 'openai-large' || model === 'gemini-large');
         reasoningEffort.style.display = isEffortModel ? 'block' : 'none';
         
         // Rebuild reasoning effort options for specific models
@@ -236,7 +136,6 @@ function updateModelControls() {
             `;
         }
 
-        // Always show thinking toggle for reasoning models
         thinkingToggleContainer.style.display = 'flex';
     }
 }
@@ -678,12 +577,11 @@ async function fetchAIResponse(messages) {
 
     // Add reasoning parameters if applicable
     if (REASONING_MODELS.includes(model)) {
-        // Only send reasoning_effort for openai-large and gemini-large
-        if (REASONING_EFFORT_MODELS.includes(model)) {
+        if (model === 'openai-large' || model === 'gemini-large') {
             body.reasoning_effort = reasoningEffort.value;
         }
         
-        // Setup thinking parameter for all reasoning models
+        // Setup thinking parameter
         body.thinking = {
             type: thinkingToggle.checked ? "enabled" : "disabled"
         };
