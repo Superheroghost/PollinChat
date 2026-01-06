@@ -388,30 +388,19 @@ body {
 .model-selector-container {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 12px;
+    flex-shrink: 1;
+    min-width: 0;
 }
 
+/* Native Model Selector - using browser defaults */
 .model-select {
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    color: var(--text-primary);
-    padding: 8px 16px;
-    border-radius: var(--radius-md);
     font-size: 14px;
-    font-weight: 600;
-    outline: none;
-    cursor: pointer;
-    transition: all 0.2s;
-    appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 12px center;
-    background-size: 14px;
-    padding-right: 40px;
-}
-
-.model-select:hover {
-    border-color: var(--text-muted);
+    font-weight: 500;
+    padding: 8px 12px;
+    min-width: 180px;
+    max-width: 300px;
+    font-family: inherit;
 }
 
 .reasoning-controls {
@@ -1094,8 +1083,40 @@ input:checked + .slider:before { transform: translateX(14px); }
     .input-area { padding: 0 12px 12px; }
     
     .model-selector-container {
+        flex-wrap: nowrap;
+        gap: 8px;
+        max-width: calc(100vw - 70px);
         overflow-x: auto;
-        padding-bottom: 4px;
-        max-width: calc(100vw - 80px);
+    }
+    
+    .model-select {
+        min-width: 140px;
+        max-width: 200px;
+        font-size: 12px;
+        padding: 6px 8px;
+    }
+    
+    .tool-controls {
+        gap: 4px;
+    }
+    
+    .tool-toggle-btn {
+        width: 30px;
+        height: 30px;
+        font-size: 11px;
+    }
+    
+    .reasoning-controls {
+        padding: 4px 8px;
+        gap: 8px;
+    }
+    
+    .switch-container {
+        font-size: 11px;
+        gap: 6px;
+    }
+    
+    .effort-select {
+        font-size: 11px;
     }
 }
