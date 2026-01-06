@@ -58,21 +58,26 @@ async function fetchModels() {
 
 // Process models data and update UI
 function processModels(models) {
-    state.models = models;
+    // Filter out models with audio output
+    const filteredModels = models.filter(m => 
+        !m.output_modalities || !m.output_modalities.includes('audio')
+    );
+    
+    state.models = filteredModels;
     
     // Update dynamic model capability arrays
-    VISION_MODELS = models
+    VISION_MODELS = filteredModels
         .filter(m => m.input_modalities && m.input_modalities.includes('image'))
         .map(m => m.name);
     
-    REASONING_MODELS = models
+    REASONING_MODELS = filteredModels
         .filter(m => m.reasoning === true)
         .map(m => m.name);
     
     // Populate model selectors
-    populateModelSelectors(models);
+    populateModelSelectors(filteredModels);
     
-    return models;
+    return filteredModels;
 }
 
 // Fallback models in case API is unavailable
@@ -82,7 +87,6 @@ const FALLBACK_MODELS = [
     { name: "openai-large", description: "OpenAI GPT-5.2 - Most Powerful & Intelligent", input_modalities: ["text", "image"], reasoning: true },
     { name: "qwen-coder", description: "Qwen3 Coder 30B - Specialized for Code Generation", input_modalities: ["text"] },
     { name: "mistral", description: "Mistral Small 3.2 24B - Efficient & Cost-Effective", input_modalities: ["text"] },
-    { name: "openai-audio", description: "OpenAI GPT-4o Mini Audio - Voice Input & Output", input_modalities: ["text", "image", "audio"] },
     { name: "gemini", description: "Google Gemini 3 Flash - Pro-Grade Reasoning at Flash Speed", input_modalities: ["text", "image", "audio", "video"] },
     { name: "gemini-fast", description: "Google Gemini 2.5 Flash Lite - Ultra Fast & Cost-Effective", input_modalities: ["text", "image"] },
     { name: "deepseek", description: "DeepSeek V3.2 - Efficient Reasoning & Agentic AI", input_modalities: ["text"], reasoning: true },
