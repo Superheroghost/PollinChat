@@ -90,6 +90,15 @@ async function init() {
     chatInput.focus();
 }
 
+// Fallback models in case API fails
+const FALLBACK_MODELS = [
+    { name: 'openai', description: 'OpenAI GPT-4o Mini' },
+    { name: 'openai-large', description: 'OpenAI o3', reasoning: true },
+    { name: 'gemini', description: 'Google Gemini 2.0 Flash' },
+    { name: 'gemini-large', description: 'Google Gemini 2.5 Pro', reasoning: true },
+    { name: 'claude', description: 'Anthropic Claude Sonnet' }
+];
+
 // Fetch models from API and populate selectors
 async function fetchAndPopulateModels() {
     try {
@@ -97,54 +106,61 @@ async function fetchAndPopulateModels() {
         const models = await modelsPromise;
         
         if (!models || models.length === 0) {
-            console.warn('No models received from API');
+            console.warn('No models received from API, using fallback models');
+            processModels(FALLBACK_MODELS);
             return;
         }
         
-        state.modelsData = models;
-        
-        // Clear existing capability arrays
-        VISION_MODELS = [];
-        REASONING_MODELS = [];
-        GOOGLE_SEARCH_MODELS = [];
-        CODE_EXECUTION_MODELS = [];
-        
-        // Populate capability arrays based on API response
-        models.forEach(model => {
-            const modelName = model.name;
-            
-            // Vision support - check if model supports input image
-            if (model.vision === true || model.input_image === true) {
-                VISION_MODELS.push(modelName);
-            }
-            
-            // Reasoning support - check if model supports reasoning/thinking
-            if (model.reasoning === true || model.thinking === true) {
-                REASONING_MODELS.push(modelName);
-            }
-            
-            // Tools support - only add for openai-large and gemini-large models
-            // as per requirements: "only keep the tools (code execution and search) in the models specified previously"
-            if (REASONING_EFFORT_MODELS.includes(modelName)) {
-                // Check for search support from API
-                if (model.tools?.includes('google_search') || model.tools?.includes('search')) {
-                    GOOGLE_SEARCH_MODELS.push(modelName);
-                }
-                // Check for code execution support from API
-                if (model.tools?.includes('code_execution') || model.tools?.includes('code')) {
-                    CODE_EXECUTION_MODELS.push(modelName);
-                }
-            }
-        });
-        
-        // Populate model selectors
-        populateModelSelector(modelSelector, models);
-        populateModelSelector(defaultModelSelect, models);
+        processModels(models);
         
     } catch (error) {
         console.error('Error fetching models:', error);
-        // Fallback: keep existing static options if API fails
+        // Fallback to static models if API fails
+        processModels(FALLBACK_MODELS);
     }
+}
+
+// Process models and populate UI
+function processModels(models) {
+    state.modelsData = models;
+    
+    // Clear existing capability arrays
+    VISION_MODELS = [];
+    REASONING_MODELS = [];
+    GOOGLE_SEARCH_MODELS = [];
+    CODE_EXECUTION_MODELS = [];
+    
+    // Populate capability arrays based on API response
+    models.forEach(model => {
+        const modelName = model.name;
+        
+        // Vision support - check if model supports input image
+        if (model.vision === true || model.input_image === true) {
+            VISION_MODELS.push(modelName);
+        }
+        
+        // Reasoning support - check if model supports reasoning/thinking
+        if (model.reasoning === true || model.thinking === true) {
+            REASONING_MODELS.push(modelName);
+        }
+        
+        // Tools support - only add for openai-large and gemini-large models
+        // as per requirements: "only keep the tools (code execution and search) in the models specified previously"
+        if (REASONING_EFFORT_MODELS.includes(modelName)) {
+            // Check for search support from API
+            if (model.tools?.includes('google_search') || model.tools?.includes('search')) {
+                GOOGLE_SEARCH_MODELS.push(modelName);
+            }
+            // Check for code execution support from API
+            if (model.tools?.includes('code_execution') || model.tools?.includes('code')) {
+                CODE_EXECUTION_MODELS.push(modelName);
+            }
+        }
+    });
+    
+    // Populate model selectors
+    populateModelSelector(modelSelector, models);
+    populateModelSelector(defaultModelSelect, models);
 }
 
 // Populate a select element with model options
