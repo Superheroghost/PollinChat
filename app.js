@@ -3,6 +3,7 @@ import hljs from 'highlight.js';
 
 // Configuration
 const API_ENDPOINT = 'https://gen.pollinations.ai/v1/chat/completions';
+const MODELS_API_ENDPOINT = 'https://gen.pollinations.ai/text/models';
 const STORAGE_KEY_CHATS = 'pollinations_chats';
 const STORAGE_KEY_SETTINGS = 'pollinations_settings';
 
@@ -19,20 +20,18 @@ let state = {
         apiKey: '',
         theme: 'light',
         defaultModel: 'openai'
-    }
+    },
+    models: [] // Will be populated from API
 };
 
-// Model Capabilities
-const VISION_MODELS = [
-    'openai-fast', 'grok', 'openai', 'claude-fast', 'midjourney', 
-    'claude', 'claude-large', 'gemini-large', 'openai-large', 
-    'gemini', 'gemini-search'
-];
+// Dynamic Model Capabilities - populated from API
+let VISION_MODELS = [];
+let REASONING_MODELS = [];
 
-const REASONING_MODELS = [
-    'deepseek', 'kimi-k2-thinking', 'perplexity-reasoning', 'gemini-large', 'openai-large'
-];
+// Models that support reasoning_effort parameter (only these two)
+const REASONING_EFFORT_MODELS = ['openai-large', 'gemini-large'];
 
+// Hardcoded tool support - ignore API tools field
 const GOOGLE_SEARCH_MODELS = [
     'gemini', 'gemini-fast', 'gemini-large', 'gemini-search', 'perplexity-fast', 'perplexity-reasoning'
 ];
@@ -40,6 +39,116 @@ const GOOGLE_SEARCH_MODELS = [
 const CODE_EXECUTION_MODELS = [
     'gemini', 'gemini-fast', 'gemini-search'
 ];
+
+// Fetch models from API
+async function fetchModels() {
+    try {
+        const response = await fetch(MODELS_API_ENDPOINT);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        const models = await response.json();
+        return processModels(models);
+    } catch (error) {
+        console.error('Failed to fetch models:', error);
+        // Use fallback models if API fails
+        return processModels(FALLBACK_MODELS);
+    }
+}
+
+// Process models data and update UI
+function processModels(models) {
+    state.models = models;
+    
+    // Update dynamic model capability arrays
+    VISION_MODELS = models
+        .filter(m => m.input_modalities && m.input_modalities.includes('image'))
+        .map(m => m.name);
+    
+    REASONING_MODELS = models
+        .filter(m => m.reasoning === true)
+        .map(m => m.name);
+    
+    // Populate model selectors
+    populateModelSelectors(models);
+    
+    return models;
+}
+
+// Fallback models in case API is unavailable
+const FALLBACK_MODELS = [
+    { name: "openai", description: "OpenAI GPT-5 Mini - Fast & Balanced", input_modalities: ["text", "image"] },
+    { name: "openai-fast", description: "OpenAI GPT-5 Nano - Ultra Fast & Affordable", input_modalities: ["text", "image"] },
+    { name: "openai-large", description: "OpenAI GPT-5.2 - Most Powerful & Intelligent", input_modalities: ["text", "image"], reasoning: true },
+    { name: "qwen-coder", description: "Qwen3 Coder 30B - Specialized for Code Generation", input_modalities: ["text"] },
+    { name: "mistral", description: "Mistral Small 3.2 24B - Efficient & Cost-Effective", input_modalities: ["text"] },
+    { name: "openai-audio", description: "OpenAI GPT-4o Mini Audio - Voice Input & Output", input_modalities: ["text", "image", "audio"] },
+    { name: "gemini", description: "Google Gemini 3 Flash - Pro-Grade Reasoning at Flash Speed", input_modalities: ["text", "image", "audio", "video"] },
+    { name: "gemini-fast", description: "Google Gemini 2.5 Flash Lite - Ultra Fast & Cost-Effective", input_modalities: ["text", "image"] },
+    { name: "deepseek", description: "DeepSeek V3.2 - Efficient Reasoning & Agentic AI", input_modalities: ["text"], reasoning: true },
+    { name: "grok", description: "xAI Grok 4 Fast - High Speed & Real-Time", input_modalities: ["text"] },
+    { name: "gemini-search", description: "Google Gemini 3 Flash - With Google Search", input_modalities: ["text", "image"] },
+    { name: "chickytutor", description: "ChickyTutor AI Language Tutor - (chickytutor.com)", input_modalities: ["text"] },
+    { name: "midijourney", description: "MIDIjourney - AI Music Composition Assistant", input_modalities: ["text"] },
+    { name: "claude-fast", description: "Anthropic Claude Haiku 4.5 - Fast & Intelligent", input_modalities: ["text", "image"] },
+    { name: "claude", description: "Anthropic Claude Sonnet 4.5 - Most Capable & Balanced", input_modalities: ["text", "image"] },
+    { name: "claude-large", description: "Anthropic Claude Opus 4.5 - Most Intelligent Model", input_modalities: ["text", "image"] },
+    { name: "perplexity-fast", description: "Perplexity Sonar - Fast & Affordable with Web Search", input_modalities: ["text"] },
+    { name: "perplexity-reasoning", description: "Perplexity Sonar Reasoning - Advanced Reasoning with Web Search", input_modalities: ["text"], reasoning: true },
+    { name: "kimi-k2-thinking", description: "Moonshot Kimi K2 Thinking - Deep Reasoning & Tool Orchestration", input_modalities: ["text"], reasoning: true },
+    { name: "gemini-large", description: "Google Gemini 3 Pro - Most Intelligent Model with 1M Context (Preview)", input_modalities: ["text", "image", "audio", "video"], reasoning: true },
+    { name: "nova-micro", description: "Amazon Nova Micro - Ultra Fast & Ultra Cheap", input_modalities: ["text"] },
+    { name: "glm", description: "Z.ai GLM-4.7 - Coding, Reasoning & Agentic Workflows", input_modalities: ["text"], reasoning: true },
+    { name: "minimax", description: "MiniMax M2.1 - Multi-Language & Agent Workflows", input_modalities: ["text"], reasoning: true }
+];
+
+// Populate model selector dropdowns
+function populateModelSelectors(models) {
+    const modelSelector = document.getElementById('modelSelector');
+    const defaultModelSelect = document.getElementById('defaultModelSelect');
+    
+    if (!models || models.length === 0) return;
+    
+    // Save current selections
+    const currentModel = modelSelector.value;
+    const currentDefaultModel = defaultModelSelect.value;
+    
+    // Clear existing options
+    modelSelector.innerHTML = '';
+    defaultModelSelect.innerHTML = '';
+    
+    // Add options from API
+    models.forEach(model => {
+        // Use description as display text, name as value
+        const option1 = document.createElement('option');
+        option1.value = model.name;
+        option1.textContent = model.description;
+        option1.title = model.description; // Tooltip for long descriptions
+        modelSelector.appendChild(option1);
+        
+        const option2 = document.createElement('option');
+        option2.value = model.name;
+        option2.textContent = model.description;
+        option2.title = model.description;
+        defaultModelSelect.appendChild(option2);
+    });
+    
+    // Restore selections if they still exist
+    if (models.find(m => m.name === currentModel)) {
+        modelSelector.value = currentModel;
+    } else if (models.length > 0) {
+        modelSelector.value = state.settings.defaultModel || models[0].name;
+    }
+    
+    if (models.find(m => m.name === currentDefaultModel)) {
+        defaultModelSelect.value = currentDefaultModel;
+    } else if (models.length > 0) {
+        defaultModelSelect.value = state.settings.defaultModel || models[0].name;
+    }
+    
+    // Update controls after populating
+    updateModelControls();
+}
 
 // UI Elements
 const sidebar = document.getElementById('sidebar');
@@ -71,8 +180,11 @@ marked.setOptions({
 });
 
 // App Initialization
-function init() {
+async function init() {
     applyTheme(state.settings.theme);
+    
+    // Fetch models from API
+    await fetchModels();
     
     // Apply saved default model
     if (state.settings.defaultModel) {
@@ -95,7 +207,7 @@ function updateModelControls() {
     attachBtn.style.opacity = isVision ? '1' : '0.3';
     attachBtn.title = isVision ? 'Attach image' : 'Selected model does not support images';
     
-    // Update tools UI
+    // Update tools UI - use hardcoded lists, ignore API tools field
     const hasSearch = GOOGLE_SEARCH_MODELS.includes(model);
     const hasCode = CODE_EXECUTION_MODELS.includes(model);
     
@@ -111,12 +223,13 @@ function updateModelControls() {
     searchToggle.classList.toggle('active', hasSearch && state.toolsEnabled.search);
     codeToggle.classList.toggle('active', hasCode && state.toolsEnabled.code);
 
-    // Update reasoning UI
+    // Update reasoning UI - check if model supports reasoning
     const isReasoning = REASONING_MODELS.includes(model);
     reasoningControls.style.display = isReasoning ? 'flex' : 'none';
     
     if (isReasoning) {
-        const isEffortModel = (model === 'openai-large' || model === 'gemini-large');
+        // Only openai-large and gemini-large get reasoning_effort dropdown
+        const isEffortModel = REASONING_EFFORT_MODELS.includes(model);
         reasoningEffort.style.display = isEffortModel ? 'block' : 'none';
         
         // Rebuild reasoning effort options for specific models
@@ -136,6 +249,7 @@ function updateModelControls() {
             `;
         }
 
+        // All reasoning models get the thinking toggle
         thinkingToggleContainer.style.display = 'flex';
     }
 }
@@ -577,11 +691,12 @@ async function fetchAIResponse(messages) {
 
     // Add reasoning parameters if applicable
     if (REASONING_MODELS.includes(model)) {
-        if (model === 'openai-large' || model === 'gemini-large') {
+        // Only openai-large and gemini-large get reasoning_effort
+        if (REASONING_EFFORT_MODELS.includes(model)) {
             body.reasoning_effort = reasoningEffort.value;
         }
         
-        // Setup thinking parameter
+        // Setup thinking parameter for all reasoning models
         body.thinking = {
             type: thinkingToggle.checked ? "enabled" : "disabled"
         };
