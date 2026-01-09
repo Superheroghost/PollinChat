@@ -185,7 +185,13 @@ marked.setOptions({
 
 // Helper function to escape HTML and format text as fallback
 function escapeHtmlAndFormatText(text) {
-    return text.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+    return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+        .replace(/\n/g, '<br>');
 }
 
 // App Initialization
