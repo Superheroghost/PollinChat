@@ -194,6 +194,16 @@ function escapeHtmlAndFormatText(text) {
         .replace(/\n/g, '<br>');
 }
 
+// Helper function to safely parse markdown with fallback
+function safeMarkdownParse(text) {
+    try {
+        return marked.parse(text);
+    } catch (error) {
+        console.warn('Marked.js not available, using plain text:', error);
+        return escapeHtmlAndFormatText(text);
+    }
+}
+
 // App Initialization
 async function init() {
     applyTheme(state.settings.theme);
@@ -621,31 +631,14 @@ async function sendMessage() {
                 
                 let html = "";
                 if (reasoning) {
-                    try {
-                        html += `
-                            <details class="thinking-dropdown">
-                                <summary><i class="fas fa-brain"></i> Thinking Process</summary>
-                                <div class="thinking-content">${marked.parse(reasoning)}</div>
-                            </details>
-                        `;
-                    } catch (error) {
-                        // Fallback if marked.js is not loaded
-                        console.warn('Marked.js not available, using plain text:', error);
-                        html += `
-                            <details class="thinking-dropdown">
-                                <summary><i class="fas fa-brain"></i> Thinking Process</summary>
-                                <div class="thinking-content">${escapeHtmlAndFormatText(reasoning)}</div>
-                            </details>
-                        `;
-                    }
+                    html += `
+                        <details class="thinking-dropdown">
+                            <summary><i class="fas fa-brain"></i> Thinking Process</summary>
+                            <div class="thinking-content">${safeMarkdownParse(reasoning)}</div>
+                        </details>
+                    `;
                 }
-                try {
-                    html += marked.parse(aiResponseText);
-                } catch (error) {
-                    // Fallback if marked.js is not loaded
-                    console.warn('Marked.js not available, using plain text:', error);
-                    html += escapeHtmlAndFormatText(aiResponseText);
-                }
+                html += safeMarkdownParse(aiResponseText);
                 contentElement.innerHTML = html;
                 
                 // Process code blocks for syntax highlighting and copy buttons
@@ -870,23 +863,12 @@ function renderMessage(msg, isPlaceholder = false) {
         // Add Reasoning/Thinking block if available
         if (msg.reasoning || msg.thinking) {
             const reasoningText = msg.reasoning || msg.thinking;
-            try {
-                html += `
-                    <details class="thinking-dropdown">
-                        <summary><i class="fas fa-brain"></i> Thinking Process</summary>
-                        <div class="thinking-content">${marked.parse(reasoningText)}</div>
-                    </details>
-                `;
-            } catch (error) {
-                // Fallback if marked.js is not loaded
-                console.warn('Marked.js not available, using plain text:', error);
-                html += `
-                    <details class="thinking-dropdown">
-                        <summary><i class="fas fa-brain"></i> Thinking Process</summary>
-                        <div class="thinking-content">${escapeHtmlAndFormatText(reasoningText)}</div>
-                    </details>
-                `;
-            }
+            html += `
+                <details class="thinking-dropdown">
+                    <summary><i class="fas fa-brain"></i> Thinking Process</summary>
+                    <div class="thinking-content">${safeMarkdownParse(reasoningText)}</div>
+                </details>
+            `;
         }
 
         // Handle vision content (array of objects)
@@ -897,21 +879,9 @@ function renderMessage(msg, isPlaceholder = false) {
                 if (part.type === 'text') textPart += part.text;
                 if (part.type === 'image_url') imagePart += `<div class="msg-image-wrap"><img src="${part.image_url.url}" class="user-uploaded-image" /></div>`;
             });
-            try {
-                html += imagePart + marked.parse(textPart);
-            } catch (error) {
-                // Fallback if marked.js is not loaded
-                console.warn('Marked.js not available, using plain text:', error);
-                html += imagePart + escapeHtmlAndFormatText(textPart);
-            }
+            html += imagePart + safeMarkdownParse(textPart);
         } else {
-            try {
-                html += marked.parse(msg.content || "");
-            } catch (error) {
-                // Fallback if marked.js is not loaded
-                console.warn('Marked.js not available, using plain text:', error);
-                html += escapeHtmlAndFormatText(msg.content || "");
-            }
+            html += safeMarkdownParse(msg.content || "");
         }
         
         content.innerHTML = html;
