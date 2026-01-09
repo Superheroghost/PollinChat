@@ -196,10 +196,18 @@ function escapeHtmlAndFormatText(text) {
 
 // Helper function to safely parse markdown with fallback
 function safeMarkdownParse(text) {
-    try {
-        return marked.parse(text);
-    } catch (error) {
-        console.warn('Marked.js not available, using plain text:', error);
+    // Check if marked is available before attempting to parse
+    if (typeof marked !== 'undefined' && marked.parse) {
+        try {
+            return marked.parse(text);
+        } catch (error) {
+            // If marked.parse fails for any reason, fall back to plain text
+            console.warn('Marked.js parsing failed, using plain text:', error);
+            return escapeHtmlAndFormatText(text);
+        }
+    } else {
+        // marked is not available, use plain text fallback
+        console.warn('Marked.js not available, using plain text');
         return escapeHtmlAndFormatText(text);
     }
 }
