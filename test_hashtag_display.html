@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Test Hashtag Display</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .message { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 8px; }
+        .user { background: #f0f0f0; }
+        .assistant { background: #e8f5e9; }
+        h3 { margin-top: 0; }
+    </style>
+</head>
+<body>
+    <h1>Hashtag Display Test</h1>
+    <p>Testing hashtag rendering with and without marked.js</p>
+    
+    <div id="output"></div>
+    
+    <script>
+        // Simulate the fallback rendering logic
+        function renderWithFallback(content) {
+            try {
+                // This will fail since marked is not defined
+                return marked.parse(content);
+            } catch (error) {
+                console.warn('Marked.js not available, using plain text:', error);
+                return content.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+            }
+        }
+        
+        const testMessages = [
+            { role: 'user', content: 'Hello with #hashtag and #another_tag' },
+            { role: 'assistant', content: 'I see your #hashtag! Here are more #test #tags' },
+            { role: 'user', content: 'Test with\n#hashtag on new line\nand #more tags' },
+            { role: 'assistant', content: '#hashtag at start, #middle in middle, and end #tag' }
+        ];
+        
+        const output = document.getElementById('output');
+        testMessages.forEach(msg => {
+            const div = document.createElement('div');
+            div.className = `message ${msg.role}`;
+            const rendered = renderWithFallback(msg.content);
+            div.innerHTML = `<h3>${msg.role}</h3><div>${rendered}</div>`;
+            output.appendChild(div);
+        });
+    </script>
+</body>
+</html>

@@ -610,14 +610,31 @@ async function sendMessage() {
                 
                 let html = "";
                 if (reasoning) {
-                    html += `
-                        <details class="thinking-dropdown">
-                            <summary><i class="fas fa-brain"></i> Thinking Process</summary>
-                            <div class="thinking-content">${marked.parse(reasoning)}</div>
-                        </details>
-                    `;
+                    try {
+                        html += `
+                            <details class="thinking-dropdown">
+                                <summary><i class="fas fa-brain"></i> Thinking Process</summary>
+                                <div class="thinking-content">${marked.parse(reasoning)}</div>
+                            </details>
+                        `;
+                    } catch (error) {
+                        // Fallback if marked.js is not loaded
+                        console.warn('Marked.js not available, using plain text:', error);
+                        html += `
+                            <details class="thinking-dropdown">
+                                <summary><i class="fas fa-brain"></i> Thinking Process</summary>
+                                <div class="thinking-content">${reasoning.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>')}</div>
+                            </details>
+                        `;
+                    }
                 }
-                html += marked.parse(aiResponseText);
+                try {
+                    html += marked.parse(aiResponseText);
+                } catch (error) {
+                    // Fallback if marked.js is not loaded
+                    console.warn('Marked.js not available, using plain text:', error);
+                    html += aiResponseText.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+                }
                 contentElement.innerHTML = html;
                 
                 // Process code blocks for syntax highlighting and copy buttons
@@ -842,12 +859,23 @@ function renderMessage(msg, isPlaceholder = false) {
         // Add Reasoning/Thinking block if available
         if (msg.reasoning || msg.thinking) {
             const reasoningText = msg.reasoning || msg.thinking;
-            html += `
-                <details class="thinking-dropdown">
-                    <summary><i class="fas fa-brain"></i> Thinking Process</summary>
-                    <div class="thinking-content">${marked.parse(reasoningText)}</div>
-                </details>
-            `;
+            try {
+                html += `
+                    <details class="thinking-dropdown">
+                        <summary><i class="fas fa-brain"></i> Thinking Process</summary>
+                        <div class="thinking-content">${marked.parse(reasoningText)}</div>
+                    </details>
+                `;
+            } catch (error) {
+                // Fallback if marked.js is not loaded
+                console.warn('Marked.js not available, using plain text:', error);
+                html += `
+                    <details class="thinking-dropdown">
+                        <summary><i class="fas fa-brain"></i> Thinking Process</summary>
+                        <div class="thinking-content">${reasoningText.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>')}</div>
+                    </details>
+                `;
+            }
         }
 
         // Handle vision content (array of objects)
@@ -858,9 +886,21 @@ function renderMessage(msg, isPlaceholder = false) {
                 if (part.type === 'text') textPart += part.text;
                 if (part.type === 'image_url') imagePart += `<div class="msg-image-wrap"><img src="${part.image_url.url}" class="user-uploaded-image" /></div>`;
             });
-            html += imagePart + marked.parse(textPart);
+            try {
+                html += imagePart + marked.parse(textPart);
+            } catch (error) {
+                // Fallback if marked.js is not loaded
+                console.warn('Marked.js not available, using plain text:', error);
+                html += imagePart + textPart.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+            }
         } else {
-            html += marked.parse(msg.content || "");
+            try {
+                html += marked.parse(msg.content || "");
+            } catch (error) {
+                // Fallback if marked.js is not loaded
+                console.warn('Marked.js not available, using plain text:', error);
+                html += (msg.content || "").replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+            }
         }
         
         content.innerHTML = html;
