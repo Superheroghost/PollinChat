@@ -183,6 +183,35 @@ marked.setOptions({
     gfm: true
 });
 
+// Helper function to escape HTML and format text as fallback
+function escapeHtmlAndFormatText(text) {
+    return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+        .replace(/\n/g, '<br>');
+}
+
+// Helper function to safely parse markdown with fallback
+function safeMarkdownParse(text) {
+    // Check if marked is available before attempting to parse
+    if (typeof marked !== 'undefined' && marked.parse) {
+        try {
+            return marked.parse(text);
+        } catch (error) {
+            // If marked.parse fails for any reason, fall back to plain text
+            console.warn('Marked.js parsing failed, using plain text:', error);
+            return escapeHtmlAndFormatText(text);
+        }
+    } else {
+        // marked is not available, use plain text fallback
+        console.warn('Marked.js not available, using plain text');
+        return escapeHtmlAndFormatText(text);
+    }
+}
+
 // App Initialization
 async function init() {
     applyTheme(state.settings.theme);
@@ -613,11 +642,11 @@ async function sendMessage() {
                     html += `
                         <details class="thinking-dropdown">
                             <summary><i class="fas fa-brain"></i> Thinking Process</summary>
-                            <div class="thinking-content">${marked.parse(reasoning)}</div>
+                            <div class="thinking-content">${safeMarkdownParse(reasoning)}</div>
                         </details>
                     `;
                 }
-                html += marked.parse(aiResponseText);
+                html += safeMarkdownParse(aiResponseText);
                 contentElement.innerHTML = html;
                 
                 // Process code blocks for syntax highlighting and copy buttons
@@ -845,7 +874,7 @@ function renderMessage(msg, isPlaceholder = false) {
             html += `
                 <details class="thinking-dropdown">
                     <summary><i class="fas fa-brain"></i> Thinking Process</summary>
-                    <div class="thinking-content">${marked.parse(reasoningText)}</div>
+                    <div class="thinking-content">${safeMarkdownParse(reasoningText)}</div>
                 </details>
             `;
         }
@@ -858,9 +887,9 @@ function renderMessage(msg, isPlaceholder = false) {
                 if (part.type === 'text') textPart += part.text;
                 if (part.type === 'image_url') imagePart += `<div class="msg-image-wrap"><img src="${part.image_url.url}" class="user-uploaded-image" /></div>`;
             });
-            html += imagePart + marked.parse(textPart);
+            html += imagePart + safeMarkdownParse(textPart);
         } else {
-            html += marked.parse(msg.content || "");
+            html += safeMarkdownParse(msg.content || "");
         }
         
         content.innerHTML = html;
