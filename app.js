@@ -106,9 +106,11 @@ const FALLBACK_MODELS = [
     { name: "minimax", description: "MiniMax M2.1 - Multi-Language & Agent Workflows", input_modalities: ["text"], reasoning: true }
 ];
 
-// Helper function to truncate model description at the last "-" symbol
+// Helper function to truncate model description at the last " - " (space-dash-space)
+// This removes the descriptive suffix while keeping the model name
 function truncateModelDescription(description) {
     const lastDashIndex = description.lastIndexOf(' - ');
+    // Only truncate if dash is found and not at the start (to avoid empty strings)
     if (lastDashIndex > 0) {
         return description.substring(0, lastDashIndex).trim();
     }
