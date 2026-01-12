@@ -106,6 +106,15 @@ const FALLBACK_MODELS = [
     { name: "minimax", description: "MiniMax M2.1 - Multi-Language & Agent Workflows", input_modalities: ["text"], reasoning: true }
 ];
 
+// Helper function to truncate model description at the last "-" symbol
+function truncateModelDescription(description) {
+    const lastDashIndex = description.lastIndexOf(' - ');
+    if (lastDashIndex > 0) {
+        return description.substring(0, lastDashIndex).trim();
+    }
+    return description;
+}
+
 // Populate model selector dropdowns
 function populateModelSelectors(models) {
     const modelSelector = document.getElementById('modelSelector');
@@ -124,16 +133,19 @@ function populateModelSelectors(models) {
     // Add options from API
     models.forEach(model => {
         // Use description as display text, name as value
+        // Truncate description at the last " - " symbol for display
+        const displayText = truncateModelDescription(model.description);
+        
         const option1 = document.createElement('option');
         option1.value = model.name;
-        option1.textContent = model.description;
-        option1.title = model.description; // Tooltip for long descriptions
+        option1.textContent = displayText;
+        option1.title = model.description; // Tooltip shows full description
         modelSelector.appendChild(option1);
         
         const option2 = document.createElement('option');
         option2.value = model.name;
-        option2.textContent = model.description;
-        option2.title = model.description;
+        option2.textContent = displayText;
+        option2.title = model.description; // Tooltip shows full description
         defaultModelSelect.appendChild(option2);
     });
     
