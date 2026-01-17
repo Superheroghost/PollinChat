@@ -166,7 +166,7 @@
                         </button>
                     </div>
                 </div>
-                <p class="disclaimer">Powered by Pollinations.ai. LLMs can make mistakes. Verify important info.</p>
+                <p class="disclaimer">Powered by Pollinations.ai and MegaLLM. LLMs can make mistakes. Verify important info.</p>
             </footer>
         </main>
     </div>
@@ -180,9 +180,18 @@
             </div>
             <div class="modal-body">
                 <div class="setting-group">
-                    <label for="apiKey">Pollinations API Key</label>
+                    <label for="aiProviderSelect">AI Provider</label>
+                    <select id="aiProviderSelect">
+                        <option value="none">None (Please select)</option>
+                        <option value="pollinations">Pollinations</option>
+                        <option value="megallm">MegaLLM</option>
+                    </select>
+                    <small>Choose your AI provider</small>
+                </div>
+                <div class="setting-group">
+                    <label for="apiKey"><span id="apiKeyLabel">API Key</span></label>
                     <input type="password" id="apiKey" placeholder="Enter your API Key (Required)">
-                    <small>Get yours at <a href="https://pollinations.ai" target="_blank">pollinations.ai</a></small>
+                    <small id="apiKeyHelp">Please select an AI provider first</small>
                 </div>
                 <div class="setting-group">
                     <label for="themeSelect">Theme</label>
