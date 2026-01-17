@@ -107,7 +107,7 @@ function processModels(models) {
         models = models.map(m => ({
             name: m.id,
             description: m.id,
-            input_modalities: ["text"], // MegaLLM models default to text
+            input_modalities: ["text", "image"], // Enable vision for all MegaLLM models
             reasoning: false
         }));
     }
