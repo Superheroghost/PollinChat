@@ -1,19 +1,14 @@
 # PollinChat
 
-A modern, feature-rich chat interface powered by [Pollinations.ai](https://pollinations.ai), providing access to multiple AI models including OpenAI, Claude, Gemini, and more.
+A modern, feature-rich chat interface powered by [Pollinations.ai](https://pollinations.ai) and [MegaLLM](https://megallm.io), providing access to multiple AI models including OpenAI, Claude, Gemini, and more.
 
 ![PollinChat Screenshot](https://github.com/user-attachments/assets/c9471ffa-7a0f-4966-b1cb-f8d58e64c6a6)
 
 ## Features
 
-- 🤖 **Multiple AI Models**: Access to 20+ AI models including:
-  - OpenAI (GPT-5.2, GPT-5 Mini)
-  - Claude (Anthropic)
-  - Gemini (Google)
-  - Mistral
-  - Grok
-  - Perplexity
-  - And many more!
+- 🤖 **Multiple AI Models**: Access to AI models from two providers:
+  - **Pollinations.ai**: 20+ models including OpenAI (GPT-5.2, GPT-5 Mini), Claude (Anthropic), Gemini (Google), Mistral, Grok, Perplexity, and many more!
+  - **MegaLLM**: Various AI models available with API key
 
 - 🖼️ **Vision Support**: Send images to vision-capable models for analysis
 - 💭 **Reasoning Models**: Advanced reasoning with models like Deepseek and Kimi K2
@@ -30,7 +25,7 @@ A modern, feature-rich chat interface powered by [Pollinations.ai](https://polli
 ### Prerequisites
 
 - A modern web browser (Chrome, Firefox, Safari, Edge)
-- Pollinations API Key (available at [pollinations.ai](https://pollinations.ai))
+- API Key from either [Pollinations.ai](https://pollinations.ai) or [MegaLLM](https://megallm.io)
 
 ### Installation
 
@@ -78,13 +73,19 @@ For vision-capable models:
 ### Settings
 
 Access settings by clicking the gear icon:
-- **API Key**: Required for all models
+- **AI Provider**: Choose between Pollinations or MegaLLM
+- **API Key**: Required for all models (get from your chosen provider)
 - **Theme**: Choose between Light, Dark, or System theme
+- **Default Model**: Set your preferred default model
 - **Delete All Chats**: Clear all conversation history
 
 ## Supported Models
 
-### Vision-Capable Models
+PollinChat supports models from two AI providers:
+
+### Pollinations.ai Models
+
+#### Vision-Capable Models
 - OpenAI Fast
 - OpenAI
 - OpenAI Large
@@ -111,6 +112,10 @@ Access settings by clicking the gear icon:
 - Nova Micro
 - ChickyTutor
 
+### MegaLLM Models
+
+When using MegaLLM as your provider, the available models will be fetched dynamically from their API after you enter your API key.
+
 ## Technologies Used
 
 - **Vanilla JavaScript**: No framework dependencies
@@ -118,6 +123,7 @@ Access settings by clicking the gear icon:
 - **Highlight.js**: Code syntax highlighting
 - **Font Awesome**: Icons
 - **Pollinations.ai API**: AI model access
+- **MegaLLM API**: Alternative AI model access
 
 ## Browser Storage
 
@@ -126,7 +132,7 @@ PollinChat uses browser localStorage to save:
 - User settings
 - Theme preferences
 
-No data is sent to any server except for AI completions via the Pollinations API.
+No data is sent to any server except for AI completions via the Pollinations or MegaLLM API.
 
 ## Contributing
 
@@ -144,7 +150,7 @@ This project is open source and available under the [MIT License](LICENSE).
 
 ## Acknowledgments
 
-- Powered by [Pollinations.ai](https://pollinations.ai)
+- Powered by [Pollinations.ai](https://pollinations.ai) and [MegaLLM](https://megallm.io)
 - Icons by [Font Awesome](https://fontawesome.com)
 - Markdown parsing by [Marked.js](https://marked.js.org)
 - Code highlighting by [Highlight.js](https://highlightjs.org)

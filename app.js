@@ -2,8 +2,10 @@ import { marked } from 'marked';
 import hljs from 'highlight.js';
 
 // Configuration
-const API_ENDPOINT = 'https://gen.pollinations.ai/v1/chat/completions';
-const MODELS_API_ENDPOINT = 'https://gen.pollinations.ai/text/models';
+const POLLINATIONS_API_ENDPOINT = 'https://gen.pollinations.ai/v1/chat/completions';
+const POLLINATIONS_MODELS_API_ENDPOINT = 'https://gen.pollinations.ai/text/models';
+const MEGALLM_API_ENDPOINT = 'https://ai.megallm.io/v1/chat/completions';
+const MEGALLM_MODELS_API_ENDPOINT = 'https://ai.megallm.io/v1/models';
 const STORAGE_KEY_CHATS = 'pollinations_chats';
 const STORAGE_KEY_SETTINGS = 'pollinations_settings';
 
@@ -19,7 +21,8 @@ let state = {
     settings: JSON.parse(localStorage.getItem(STORAGE_KEY_SETTINGS)) || {
         apiKey: '',
         theme: 'light',
-        defaultModel: 'openai'
+        defaultModel: 'openai',
+        aiProvider: 'none'
     },
     models: [] // Will be populated from API
 };
@@ -43,22 +46,73 @@ const CODE_EXECUTION_MODELS = [
 // Fetch models from API
 async function fetchModels() {
     try {
-        const response = await fetch(MODELS_API_ENDPOINT);
+        // Check if we have a provider and API key
+        if (!state.settings.aiProvider || state.settings.aiProvider === 'none') {
+            // No provider selected, return empty array
+            return [];
+        }
+        
+        // Determine which endpoint to use based on provider
+        let modelsEndpoint;
+        if (state.settings.aiProvider === 'megallm') {
+            modelsEndpoint = MEGALLM_MODELS_API_ENDPOINT;
+        } else if (state.settings.aiProvider === 'pollinations') {
+            modelsEndpoint = POLLINATIONS_MODELS_API_ENDPOINT;
+        } else {
+            return [];
+        }
+        
+        const headers = {
+            'Content-Type': 'application/json'
+        };
+        
+        // Add API key if available (required for MegaLLM)
+        if (state.settings.apiKey && state.settings.aiProvider === 'megallm') {
+            headers['Authorization'] = `Bearer ${state.settings.apiKey}`;
+        }
+        
+        const response = await fetch(modelsEndpoint, { headers });
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
         }
-        const models = await response.json();
+        const data = await response.json();
+        
+        // MegaLLM returns {data: [...models]} while Pollinations returns [...models] directly
+        const models = state.settings.aiProvider === 'megallm' ? data.data : data;
+        
         return processModels(models);
     } catch (error) {
         console.error('Failed to fetch models:', error);
-        // Use fallback models if API fails
-        return processModels(FALLBACK_MODELS);
+        // Use fallback models only for Pollinations
+        if (state.settings.aiProvider === 'pollinations') {
+            return processModels(FALLBACK_MODELS);
+        }
+        return [];
     }
 }
 
 // Process models data and update UI
 function processModels(models) {
-    // Filter out models with audio output
+    // If no models, show placeholder
+    if (!models || models.length === 0) {
+        state.models = [];
+        VISION_MODELS = [];
+        REASONING_MODELS = [];
+        populateModelSelectorsWithPlaceholder();
+        return [];
+    }
+    
+    // For MegaLLM, we need to transform the model format
+    if (state.settings.aiProvider === 'megallm') {
+        models = models.map(m => ({
+            name: m.id,
+            description: m.id,
+            input_modalities: ["text"], // MegaLLM models default to text
+            reasoning: false
+        }));
+    }
+    
+    // Filter out models with audio output (for Pollinations)
     const filteredModels = models.filter(m => 
         !m.output_modalities || !m.output_modalities.includes('audio')
     );
@@ -168,6 +222,15 @@ function populateModelSelectors(models) {
     updateModelControls();
 }
 
+// Populate model selectors with placeholder when no provider/API key
+function populateModelSelectorsWithPlaceholder() {
+    const modelSelector = document.getElementById('modelSelector');
+    const defaultModelSelect = document.getElementById('defaultModelSelect');
+    
+    modelSelector.innerHTML = '<option value="">Please choose your AI provider and enter your API key</option>';
+    defaultModelSelect.innerHTML = '<option value="">Please choose your AI provider and enter your API key</option>';
+}
+
 // UI Elements
 const sidebar = document.getElementById('sidebar');
 const chatHistory = document.getElementById('chatHistory');
@@ -184,6 +247,9 @@ const thinkingToggleContainer = document.getElementById('thinkingToggleContainer
 const welcomeScreen = document.getElementById('welcomeScreen');
 const settingsModal = document.getElementById('settingsModal');
 const apiKeyInput = document.getElementById('apiKey');
+const aiProviderSelect = document.getElementById('aiProviderSelect');
+const apiKeyLabel = document.getElementById('apiKeyLabel');
+const apiKeyHelp = document.getElementById('apiKeyHelp');
 const themeSelect = document.getElementById('themeSelect');
 const defaultModelSelect = document.getElementById('defaultModelSelect');
 const newChatBtn = document.getElementById('newChatBtn');
@@ -223,6 +289,22 @@ function safeMarkdownParse(text) {
         // marked is not available, use plain text fallback
         console.warn('Marked.js not available, using plain text');
         return escapeHtmlAndFormatText(text);
+    }
+}
+
+// Update API key label based on selected provider
+function updateApiKeyLabel() {
+    const provider = aiProviderSelect.value;
+    
+    if (provider === 'pollinations') {
+        apiKeyLabel.textContent = 'Pollinations API Key';
+        apiKeyHelp.innerHTML = 'Get yours at <a href="https://pollinations.ai" target="_blank">pollinations.ai</a>';
+    } else if (provider === 'megallm') {
+        apiKeyLabel.textContent = 'MegaLLM API Key';
+        apiKeyHelp.innerHTML = 'Get it from <a href="https://megallm.io" target="_blank">megallm.io</a>';
+    } else {
+        apiKeyLabel.textContent = 'API Key';
+        apiKeyHelp.textContent = 'Please select an AI provider first';
     }
 }
 
@@ -363,22 +445,45 @@ function setupEventListeners() {
     // Settings
     document.getElementById('settingsBtn').addEventListener('click', () => {
         apiKeyInput.value = state.settings.apiKey;
+        aiProviderSelect.value = state.settings.aiProvider || 'none';
         themeSelect.value = state.settings.theme;
         defaultModelSelect.value = state.settings.defaultModel || 'openai';
+        updateApiKeyLabel();
         settingsModal.style.display = 'flex';
+    });
+
+    // Handle AI provider selection changes
+    aiProviderSelect.addEventListener('change', () => {
+        updateApiKeyLabel();
     });
 
     document.getElementById('closeSettings').addEventListener('click', () => {
         settingsModal.style.display = 'none';
     });
 
-    document.getElementById('saveSettings').addEventListener('click', () => {
+    document.getElementById('saveSettings').addEventListener('click', async () => {
+        const oldProvider = state.settings.aiProvider;
+        const oldApiKey = state.settings.apiKey;
+        
         state.settings.apiKey = apiKeyInput.value.trim();
+        state.settings.aiProvider = aiProviderSelect.value;
         state.settings.theme = themeSelect.value;
         state.settings.defaultModel = defaultModelSelect.value;
         saveSettings();
         applyTheme(state.settings.theme);
-        modelSelector.value = state.settings.defaultModel;
+        
+        // If provider or API key changed, refetch models
+        if (oldProvider !== state.settings.aiProvider || oldApiKey !== state.settings.apiKey) {
+            await fetchModels();
+            
+            // Update model selector value
+            if (state.models.length > 0) {
+                modelSelector.value = state.settings.defaultModel || state.models[0].name;
+            }
+        } else {
+            modelSelector.value = state.settings.defaultModel;
+        }
+        
         updateModelControls();
         settingsModal.style.display = 'none';
     });
@@ -504,6 +609,11 @@ async function executeTool(name, args) {
 // Generate chat title using AI
 async function generateChatTitle(chat) {
     try {
+        // Check if we have a valid provider
+        if (!state.settings.aiProvider || state.settings.aiProvider === 'none') {
+            return;
+        }
+        
         // Get the first user message
         const firstUserMsg = chat.messages.find(m => m.role === 'user');
         if (!firstUserMsg) return;
@@ -519,6 +629,11 @@ async function generateChatTitle(chat) {
         
         if (!messageText || messageText.length < 3) return;
         
+        // Determine API endpoint based on provider
+        const apiEndpoint = state.settings.aiProvider === 'megallm' 
+            ? MEGALLM_API_ENDPOINT 
+            : POLLINATIONS_API_ENDPOINT;
+        
         const headers = {
             'Content-Type': 'application/json'
         };
@@ -527,7 +642,7 @@ async function generateChatTitle(chat) {
             headers['Authorization'] = `Bearer ${state.settings.apiKey}`;
         }
         
-        const response = await fetch(API_ENDPOINT, {
+        const response = await fetch(apiEndpoint, {
             method: 'POST',
             headers: headers,
             body: JSON.stringify({
@@ -702,6 +817,12 @@ async function sendMessage() {
 
 async function fetchAIResponse(messages) {
     const model = modelSelector.value;
+    
+    // Determine API endpoint based on provider
+    const apiEndpoint = state.settings.aiProvider === 'megallm' 
+        ? MEGALLM_API_ENDPOINT 
+        : POLLINATIONS_API_ENDPOINT;
+    
     const headers = {
         'Content-Type': 'application/json'
     };
@@ -751,7 +872,7 @@ async function fetchAIResponse(messages) {
 
     // Retry indefinitely on timeout (524) errors
     while (true) {
-        const response = await fetch(API_ENDPOINT, {
+        const response = await fetch(apiEndpoint, {
             method: 'POST',
             headers: headers,
             body: JSON.stringify(body)
