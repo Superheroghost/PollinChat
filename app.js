@@ -1173,19 +1173,16 @@ async function handleByopAuthFlow() {
     // We use the same origin/path that served this page.
     const redirectUri = window.location.origin + window.location.pathname;
 
-    const authUrl = new URL('https://enter.pollinations.ai/oauth/authorize');
+    // Pollinations BYOP uses the `/authorize` endpoint (not `/oauth/authorize`).
+    // Match the redirect format: https://enter.pollinations.ai/authorize?redirect_uri=...&client_id=...
+    const authUrl = new URL('https://enter.pollinations.ai/authorize');
     authUrl.searchParams.set('client_id', BYOP_CLIENT_ID);
     authUrl.searchParams.set('redirect_uri', redirectUri);
-    authUrl.searchParams.set('response_type', 'code');
 
-    // Request key scopes needed for generation and account access if applicable.
-    // Keep it minimal; generation requires account key permissions handled by provider.
-    authUrl.searchParams.set('scope', 'generation');
+    // BYOP example uses `scope=usage` to request usage permissions.
+    authUrl.searchParams.set('scope', 'usage');
 
-    // Some providers support prompt=consent to ensure a fresh approval screen.
-    authUrl.searchParams.set('prompt', 'consent');
-
-    // Start OAuth in current tab
+    // Start BYOP authorization now.
     window.location.assign(authUrl.toString());
 }
 
