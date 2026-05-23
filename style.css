@@ -70,8 +70,9 @@ body {
     font-family: var(--font-family);
     background-color: var(--bg-primary);
     color: var(--text-primary);
-    height: 100vh;
-    overflow: hidden;
+    min-height: 100vh;
+    overflow-y: auto; /* window-level scrolling */
+    overflow-x: hidden;
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
     display: flex;
@@ -100,9 +101,9 @@ body {
 .app-container {
     display: flex;
     width: 100vw;
-    height: 100vh;
+    min-height: 100vh;
     position: relative;
-    overflow: hidden;
+    overflow: visible; /* let body/window own the vertical scroll */
 }
 
 /* Sidebar: Refined Glassmorphism */
@@ -188,7 +189,8 @@ body {
 
 .chat-history-container {
     flex: 1;
-    overflow-y: auto;
+    overflow-y: visible; /* let body/window handle scrolling */
+    overflow-x: hidden;
     padding: 0 12px;
 }
 
@@ -597,7 +599,7 @@ input:checked + .slider:before { transform: translateX(14px); }
 /* Chat Container & Messages */
 .chat-container {
     flex: 1;
-    overflow-y: auto;
+    overflow: visible; /* no internal scrollbar */
     overflow-x: hidden;
     display: flex;
     flex-direction: column;
@@ -613,6 +615,13 @@ input:checked + .slider:before { transform: translateX(14px); }
     flex-direction: column;
     gap: 24px;
     overflow-x: hidden;
+    overflow-y: visible; /* window-level scrollbar handles scroll */
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Prevent the chat container from ever capturing scrollbars */
+#chatContainer {
+    overflow: visible !important;
 }
 
 .message {
@@ -877,6 +886,7 @@ input:checked + .slider:before { transform: translateX(14px); }
 
 .input-wrapper {
     pointer-events: auto;
+    width: 100%;
     max-width: var(--max-chat-width);
     margin: 0 auto;
     background: var(--input-bg);
@@ -898,10 +908,12 @@ input:checked + .slider:before { transform: translateX(14px); }
     display: flex;
     align-items: flex-end;
     gap: 12px;
+    width: 100%;
 }
 
 #chatInput {
     flex: 1;
+    width: 100%;
     background: transparent;
     border: none;
     color: var(--text-primary);

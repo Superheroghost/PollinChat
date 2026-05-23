@@ -7,6 +7,12 @@ const MODELS_API_ENDPOINT = 'https://gen.pollinations.ai/text/models';
 const STORAGE_KEY_CHATS = 'pollinations_chats';
 const STORAGE_KEY_SETTINGS = 'pollinations_settings';
 
+// BYOP (Bring Your Own Pollen) authorization
+const BYOP_CLIENT_ID = 'pk_CRAbIJBQQEzLmt4u';
+// BYOP token storage requirement: use localStorage key `pollin_user_key`.
+const STORAGE_KEY_BYOP_TOKEN = 'pollin_user_key';
+const BYOP_STATUS_KEY = 'pollinations_byop_status';
+
 // State management
 let state = {
     chats: JSON.parse(localStorage.getItem(STORAGE_KEY_CHATS)) || [],
@@ -184,6 +190,7 @@ const thinkingToggleContainer = document.getElementById('thinkingToggleContainer
 const welcomeScreen = document.getElementById('welcomeScreen');
 const settingsModal = document.getElementById('settingsModal');
 const apiKeyInput = document.getElementById('apiKey');
+const byopStatus = document.getElementById('byopStatus');
 const themeSelect = document.getElementById('themeSelect');
 const defaultModelSelect = document.getElementById('defaultModelSelect');
 const newChatBtn = document.getElementById('newChatBtn');
@@ -229,7 +236,21 @@ function safeMarkdownParse(text) {
 // App Initialization
 async function init() {
     applyTheme(state.settings.theme);
-    
+
+    // BYOP auth flow: fetch/restore authorized key, and kick off OAuth if missing
+    await handleByopAuthFlow();
+
+    // Hard-gate chat input until authorized
+    if (!state.settings.apiKey) {
+        if (chatInput) chatInput.disabled = true;
+        if (sendBtn) sendBtn.disabled = true;
+        if (byopStatus) {
+            byopStatus.textContent = 'Authorization required';
+            byopStatus.dataset.status = 'needs-auth';
+        }
+        return;
+    }
+
     // Fetch models from API
     await fetchModels();
     
@@ -302,6 +323,15 @@ function updateModelControls() {
 }
 
 function setupEventListeners() {
+    // Lock key input UI (users must not type/select alternative keys)
+    if (apiKeyInput) {
+        apiKeyInput.disabled = true;
+        apiKeyInput.setAttribute('readonly', 'true');
+        apiKeyInput.tabIndex = -1;
+        apiKeyInput.addEventListener('keydown', (e) => {
+            e.preventDefault();
+        });
+    }
     // Input handling
     chatInput.addEventListener('input', () => {
         chatInput.style.height = 'auto';
@@ -373,15 +403,15 @@ function setupEventListeners() {
     });
 
     document.getElementById('saveSettings').addEventListener('click', () => {
-        state.settings.apiKey = apiKeyInput.value.trim();
-        state.settings.theme = themeSelect.value;
-        state.settings.defaultModel = defaultModelSelect.value;
-        saveSettings();
-        applyTheme(state.settings.theme);
-        modelSelector.value = state.settings.defaultModel;
-        updateModelControls();
-        settingsModal.style.display = 'none';
-    });
+            // Keep BYOP token/key from localStorage; no manual edits
+            state.settings.theme = themeSelect.value;
+            state.settings.defaultModel = defaultModelSelect.value;
+            saveSettings();
+            applyTheme(state.settings.theme);
+            modelSelector.value = state.settings.defaultModel;
+            updateModelControls();
+            settingsModal.style.display = 'none';
+        });
 
     const deleteAllHandler = () => {
         if (confirm('Are you sure you want to delete ALL chats? This action cannot be undone.')) {
@@ -702,13 +732,15 @@ async function sendMessage() {
 
 async function fetchAIResponse(messages) {
     const model = modelSelector.value;
-    const headers = {
-        'Content-Type': 'application/json'
-    };
-    
-    if (state.settings.apiKey) {
-        headers['Authorization'] = `Bearer ${state.settings.apiKey}`;
+
+    if (!state.settings.apiKey) {
+        throw new Error('BYOP authorization required.');
     }
+
+    const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${state.settings.apiKey}`
+    };
 
     // Filter tools based on model capabilities and UI toggles
     let availableTools = TOOLS.filter(tool => {
@@ -975,8 +1007,15 @@ function clearMessages() {
 }
 
 function scrollToBottom() {
-    const container = document.getElementById('chatContainer');
-    container.scrollTop = container.scrollHeight;
+    // Window-level scrolling: move viewport to bottom of the chat content.
+    // This avoids relying on any internal overflow containers.
+    const list = document.getElementById('messagesList');
+    if (!list) return;
+
+    // Scroll the nearest scrollable ancestor (fallback to window)
+    const rect = list.getBoundingClientRect();
+    const absoluteBottom = rect.bottom + window.scrollY;
+    window.scrollTo({ top: absoluteBottom, behavior: 'smooth' });
 }
 
 // State Persistence
@@ -1041,6 +1080,114 @@ window.switchAndRetry = (modelValue) => {
         sendMessage();
     }
 };
+
+function parseAuthRedirectAndCleanup() {
+    // Pollinations BYOP redirect is expected to deliver the scoped user key/token in the URL
+    // (query or fragment). We remove all auth-related query params/fragment afterwards.
+    const url = new URL(window.location.href);
+
+    // Common token parameter names we clean up.
+    const tokenParamNames = [
+        // Requirement: prefer URL-hash `api_key` handling.
+        'api_key',
+        'token',
+        'access_token',
+        'key',
+        'sk',
+        'sk_',
+        'client_token'
+    ];
+
+    let found = null;
+    for (const name of tokenParamNames) {
+        const v = url.searchParams.get(name);
+        if (v) {
+            found = v;
+            url.searchParams.delete(name);
+            break;
+        }
+    }
+
+    // Fragment cleanup (if provider uses implicit/fragment-based delivery)
+    if (url.hash && url.hash.length > 1) {
+        const hash = url.hash.startsWith('#') ? url.hash.slice(1) : url.hash;
+        const hashParams = new URLSearchParams(hash);
+        for (const name of tokenParamNames) {
+            const v = hashParams.get(name);
+            if (v) {
+                found = v;
+                hashParams.delete(name);
+                break;
+            }
+        }
+        const remaining = hashParams.toString();
+        url.hash = remaining ? `#${remaining}` : '';
+    }
+
+    // Remove generic OAuth params as well
+    ['state', 'code', 'scope', 'authuser', 'session_state', 'prompt', 'error', 'error_description'].forEach(p => {
+        url.searchParams.delete(p);
+    });
+
+    // If we removed auth params, also strip empty '?' by rebuilding href
+    window.history.replaceState({}, document.title, url.pathname + (url.searchParams.toString() ? `?${url.searchParams.toString()}` : '') + (url.hash || ''));
+
+    return found;
+}
+
+async function handleByopAuthFlow() {
+    // If already authorized in localStorage, load it and unlock UI
+    const storedToken = localStorage.getItem(STORAGE_KEY_BYOP_TOKEN);
+    if (storedToken) {
+        state.settings.apiKey = storedToken;
+        if (apiKeyInput) apiKeyInput.value = storedToken;
+        if (byopStatus) {
+            byopStatus.textContent = 'Authorized';
+            byopStatus.dataset.status = 'authorized';
+        }
+        // Ensure any auth redirect params are cleaned even on a later refresh
+        parseAuthRedirectAndCleanup();
+        return;
+    }
+
+    // Always clean up URL auth params after landing
+    const redirectToken = parseAuthRedirectAndCleanup();
+    if (redirectToken) {
+        localStorage.setItem(STORAGE_KEY_BYOP_TOKEN, redirectToken);
+        state.settings.apiKey = redirectToken;
+        if (apiKeyInput) apiKeyInput.value = redirectToken;
+        if (byopStatus) {
+            byopStatus.textContent = 'Authorized';
+            byopStatus.dataset.status = 'authorized';
+        }
+        return;
+    }
+
+    if (byopStatus) {
+        byopStatus.textContent = 'Authorization required';
+        byopStatus.dataset.status = 'needs-auth';
+    }
+
+    // Trigger Pollinations BYOP authorization flow (OAuth redirect)
+    // Redirect URI is assumed to already be configured in the App Key dashboard.
+    // We use the same origin/path that served this page.
+    const redirectUri = window.location.origin + window.location.pathname;
+
+    const authUrl = new URL('https://enter.pollinations.ai/oauth/authorize');
+    authUrl.searchParams.set('client_id', BYOP_CLIENT_ID);
+    authUrl.searchParams.set('redirect_uri', redirectUri);
+    authUrl.searchParams.set('response_type', 'code');
+
+    // Request key scopes needed for generation and account access if applicable.
+    // Keep it minimal; generation requires account key permissions handled by provider.
+    authUrl.searchParams.set('scope', 'generation');
+
+    // Some providers support prompt=consent to ensure a fresh approval screen.
+    authUrl.searchParams.set('prompt', 'consent');
+
+    // Start OAuth in current tab
+    window.location.assign(authUrl.toString());
+}
 
 // Start the app
 init();

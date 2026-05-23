@@ -2,7 +2,7 @@
 html,
 body {
     height: 100%;
-    overflow: hidden; /* keep app layout stable */
+    overflow: visible; /* page scrollbars live on window */
 }
 
 .app-container {
@@ -12,7 +12,7 @@ body {
 /* The chat container should not be the scroll container if you want the scrollbar on the far right.
    Make the main content area scroll instead. */
 .main-content {
-    overflow-y: auto;
+    overflow-y: visible; /* no internal scrolling */
     overflow-x: hidden;
 }
 

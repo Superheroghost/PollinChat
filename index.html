@@ -181,8 +181,9 @@
             <div class="modal-body">
                 <div class="setting-group">
                     <label for="apiKey">Pollinations API Key</label>
-                    <input type="password" id="apiKey" placeholder="Enter your API Key (Required)">
-                    <small>Get yours at <a href="https://pollinations.ai" target="_blank">pollinations.ai</a></small>
+                    <input type="password" id="apiKey" placeholder="Authorized key will be stored here" disabled>
+                    <div id="byopStatus" class="byop-status">Not authorized</div>
+                    <small>Bring Your Own Pollen (BYOP) authorization is required.</small>
                 </div>
                 <div class="setting-group">
                     <label for="themeSelect">Theme</label>
