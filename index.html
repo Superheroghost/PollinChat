@@ -149,7 +149,162 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Modalities panes (shared history inside) -->
+                <div class="modal-tabs" role="tablist" aria-label="Modalities">
+                    <button class="modal-tab active" data-modal="text" type="button">Text</button>
+                    <button class="modal-tab" data-modal="image" type="button">Image</button>
+                    <button class="modal-tab" data-modal="audio" type="button">Audio</button>
+                    <button class="modal-tab" data-modal="video" type="button">Video</button>
+                </div>
+
                 <div class="messages-list" id="messagesList"></div>
+
+                <section class="modality-console" id="console-text" data-modal="text"></section>
+
+                <section class="modality-console" id="console-image" data-modal="image" style="display:none;">
+                    <h2>Image generation</h2>
+                    <div class="field">
+                        <label for="imagePrompt">Prompt</label>
+                        <textarea id="imagePrompt" placeholder="Describe the image you want to generate..."></textarea>
+                    </div>
+                    <div class="grid2">
+                        <div class="field">
+                            <label for="imageModel">Model</label>
+                            <select id="imageModel"></select>
+                        </div>
+                        <div class="field">
+                            <label for="imageQuality">Quality</label>
+                            <select id="imageQuality">
+                                <option value="low">low</option>
+                                <option value="medium" selected>medium</option>
+                                <option value="high">high</option>
+                                <option value="hd">hd</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="grid2">
+                        <div class="field">
+                            <label for="imageWidth">Width</label>
+                            <input id="imageWidth" type="number" value="1024" min="64" step="64" />
+                        </div>
+                        <div class="field">
+                            <label for="imageHeight">Height</label>
+                            <input id="imageHeight" type="number" value="1024" min="64" step="64" />
+                        </div>
+                    </div>
+                    <div class="grid2">
+                        <div class="field">
+                            <label for="imageSeed">Seed (optional)</label>
+                            <input id="imageSeed" type="number" placeholder="Leave blank for random" />
+                        </div>
+                        <div class="field">
+                            <label for="imageEnhance">Enhance</label>
+                            <select id="imageEnhance">
+                                <option value="false" selected>false</option>
+                                <option value="true">true</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label for="imageNegative">Negative prompt (optional)</label>
+                        <textarea id="imageNegative" placeholder="What to avoid..."></textarea>
+                    </div>
+                    <div class="field">
+                        <label for="imageTransparent">Transparent (optional)</label>
+                        <select id="imageTransparent">
+                            <option value="false" selected>false</option>
+                            <option value="true">true</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="imageSafe">Safe</label>
+                        <input id="imageSafe" type="text" placeholder="true/false or comma-separated string" value="true" />
+                    </div>
+                    <div class="console-actions">
+                        <button type="button" class="primary" id="imageGenerateBtn">Generate</button>
+                        <button type="button" class="ghost" id="imageCancelBtn" disabled>Cancel</button>
+                        <button type="button" class="ghost" id="imageRetryBtn" disabled>Retry</button>
+                    </div>
+                </section>
+
+                <section class="modality-console" id="console-audio" data-modal="audio" style="display:none;">
+                    <h2>Audio generation</h2>
+                    <div class="field">
+                        <label for="audioText">Text</label>
+                        <textarea id="audioText" placeholder="Text to convert to audio..."></textarea>
+                    </div>
+                    <div class="grid2">
+                        <div class="field">
+                            <label for="audioModel">Model</label>
+                            <select id="audioModel"></select>
+                        </div>
+                        <div class="field">
+                            <label for="audioFormat">Response format</label>
+                            <select id="audioFormat">
+                                <option value="mp3" selected>mp3</option>
+                                <option value="wav">wav</option>
+                                <option value="flac">flac</option>
+                                <option value="aac">aac</option>
+                                <option value="opus">opus</option>
+                                <option value="pcm">pcm</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label for="audioSpeed">Speed</label>
+                        <input id="audioSpeed" type="number" value="1" min="0.25" step="0.25" max="4" />
+                    </div>
+                    <div class="field">
+                        <label for="audioSafe">Safe</label>
+                        <input id="audioSafe" type="text" placeholder="true/false or comma-separated string" value="true" />
+                    </div>
+                    <div class="console-actions">
+                        <button type="button" class="primary" id="audioGenerateBtn">Generate</button>
+                        <button type="button" class="ghost" id="audioCancelBtn" disabled>Cancel</button>
+                        <button type="button" class="ghost" id="audioRetryBtn" disabled>Retry</button>
+                    </div>
+                </section>
+
+                <section class="modality-console" id="console-video" data-modal="video" style="display:none;">
+                    <h2>Video generation</h2>
+                    <div class="field">
+                        <label for="videoPrompt">Prompt</label>
+                        <textarea id="videoPrompt" placeholder="Describe the video you want to generate..."></textarea>
+                    </div>
+                    <div class="grid2">
+                        <div class="field">
+                            <label for="videoModel">Model</label>
+                            <select id="videoModel"></select>
+                        </div>
+                        <div class="field">
+                            <label for="videoDuration">Duration (seconds)</label>
+                            <input id="videoDuration" type="number" value="5" min="1" step="1" />
+                        </div>
+                    </div>
+                    <div class="grid2">
+                        <div class="field">
+                            <label for="videoAspectRatio">Aspect ratio</label>
+                            <input id="videoAspectRatio" type="text" value="1:1" />
+                        </div>
+                        <div class="field">
+                            <label for="videoAudio">Audio</label>
+                            <select id="videoAudio">
+                                <option value="false" selected>false</option>
+                                <option value="true">true</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label for="videoSafe">Safe</label>
+                        <input id="videoSafe" type="text" placeholder="true/false or comma-separated string" value="true" />
+                    </div>
+                    <div class="console-actions">
+                        <button type="button" class="primary" id="videoGenerateBtn">Generate</button>
+                        <button type="button" class="ghost" id="videoCancelBtn" disabled>Cancel</button>
+                        <button type="button" class="ghost" id="videoRetryBtn" disabled>Retry</button>
+                    </div>
+                </section>
             </div>
 
             <footer class="input-area">

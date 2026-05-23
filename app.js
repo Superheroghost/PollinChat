@@ -4,6 +4,12 @@ import hljs from 'highlight.js';
 // Configuration
 const API_ENDPOINT = 'https://gen.pollinations.ai/v1/chat/completions';
 const MODELS_API_ENDPOINT = 'https://gen.pollinations.ai/text/models';
+
+// Media generation endpoints (derived from api.json endpoint shapes)
+const IMAGE_ENDPOINT_BASE = 'https://gen.pollinations.ai/image/';
+const VIDEO_ENDPOINT_BASE = 'https://gen.pollinations.ai/video/';
+const AUDIO_ENDPOINT_BASE = 'https://gen.pollinations.ai/audio/';
+
 const STORAGE_KEY_CHATS = 'pollinations_chats';
 const STORAGE_KEY_SETTINGS = 'pollinations_settings';
 
@@ -198,6 +204,48 @@ const imageInput = document.getElementById('imageInput');
 const attachBtn = document.getElementById('attachBtn');
 const imagePreviewContainer = document.getElementById('imagePreviewContainer');
 
+// Modality UI
+const modalTabs = Array.from(document.querySelectorAll('.modal-tab'));
+const consoles = {
+    text: document.getElementById('console-text'),
+    image: document.getElementById('console-image'),
+    audio: document.getElementById('console-audio'),
+    video: document.getElementById('console-video'),
+};
+
+const imageModelSelect = document.getElementById('imageModel');
+const imagePromptInput = document.getElementById('imagePrompt');
+const imageQualitySelect = document.getElementById('imageQuality');
+const imageWidthInput = document.getElementById('imageWidth');
+const imageHeightInput = document.getElementById('imageHeight');
+const imageSeedInput = document.getElementById('imageSeed');
+const imageEnhanceSelect = document.getElementById('imageEnhance');
+const imageNegativeInput = document.getElementById('imageNegative');
+const imageTransparentSelect = document.getElementById('imageTransparent');
+const imageSafeInput = document.getElementById('imageSafe');
+const imageGenerateBtn = document.getElementById('imageGenerateBtn');
+const imageCancelBtn = document.getElementById('imageCancelBtn');
+const imageRetryBtn = document.getElementById('imageRetryBtn');
+
+const audioModelSelect = document.getElementById('audioModel');
+const audioTextInput = document.getElementById('audioText');
+const audioFormatSelect = document.getElementById('audioFormat');
+const audioSpeedInput = document.getElementById('audioSpeed');
+const audioSafeInput = document.getElementById('audioSafe');
+const audioGenerateBtn = document.getElementById('audioGenerateBtn');
+const audioCancelBtn = document.getElementById('audioCancelBtn');
+const audioRetryBtn = document.getElementById('audioRetryBtn');
+
+const videoModelSelect = document.getElementById('videoModel');
+const videoPromptInput = document.getElementById('videoPrompt');
+const videoDurationInput = document.getElementById('videoDuration');
+const videoAspectRatioInput = document.getElementById('videoAspectRatio');
+const videoAudioSelect = document.getElementById('videoAudio');
+const videoSafeInput = document.getElementById('videoSafe');
+const videoGenerateBtn = document.getElementById('videoGenerateBtn');
+const videoCancelBtn = document.getElementById('videoCancelBtn');
+const videoRetryBtn = document.getElementById('videoRetryBtn');
+
 // Initialize Markdown
 marked.setOptions({
     breaks: true,
@@ -236,6 +284,11 @@ function safeMarkdownParse(text) {
 // App Initialization
 async function init() {
     applyTheme(state.settings.theme);
+
+    setupModalTabs();
+
+    // Modalities generation wiring
+    setupModalGenerationHandlers();
 
     // BYOP auth flow: fetch/restore authorized key, and kick off OAuth if missing
     await handleByopAuthFlow();
@@ -1080,6 +1133,282 @@ window.switchAndRetry = (modelValue) => {
         sendMessage();
     }
 };
+
+let activeModalityJob = null; // { modal, controller, retryPayload }
+
+function setupModalTabs() {
+    if (!modalTabs || modalTabs.length === 0) return;
+
+    const showModal = (modal) => {
+        Object.entries(consoles).forEach(([key, el]) => {
+            if (!el) return;
+            el.style.display = key === modal ? 'block' : 'none';
+        });
+
+        modalTabs.forEach((btn) => {
+            btn.classList.toggle('active', btn.dataset.modal === modal);
+        });
+
+        const isText = modal === 'text';
+        if (chatInput) chatInput.disabled = !isText;
+        if (sendBtn) sendBtn.disabled = !isText;
+    };
+
+    modalTabs.forEach((btn) => {
+        btn.addEventListener('click', () => showModal(btn.dataset.modal));
+    });
+
+    showModal('text');
+}
+
+function getApiKeyOrThrow() {
+    if (!state.settings.apiKey) throw new Error('BYOP authorization required.');
+    return state.settings.apiKey;
+}
+
+function parseSafeValue(input) {
+    const v = (input ?? '').toString().trim();
+    if (!v) return undefined;
+    if (v === 'true') return 'true';
+    if (v === 'false') return 'false';
+    return v;
+}
+
+function setModalControls(modal, { isGenerating, canRetry } = {}) {
+    const map = {
+        image: { gen: imageGenerateBtn, cancel: imageCancelBtn, retry: imageRetryBtn },
+        audio: { gen: audioGenerateBtn, cancel: audioCancelBtn, retry: audioRetryBtn },
+        video: { gen: videoGenerateBtn, cancel: videoCancelBtn, retry: videoRetryBtn },
+    };
+    const el = map[modal];
+    if (!el) return;
+    if (el.gen) el.gen.disabled = !!isGenerating;
+    if (el.cancel) el.cancel.disabled = !isGenerating;
+    if (el.retry) el.retry.disabled = !canRetry;
+}
+
+function pushUnifiedHistory({ status, title, details, asset }) {
+    const contentParts = [];
+    if (title) contentParts.push({ type: 'text', text: `**${title}**` });
+    if (status) contentParts.push({ type: 'text', text: `\n\nStatus: ${status}` });
+    if (details) contentParts.push({ type: 'text', text: `\n\n${details}` });
+
+    if (asset?.type === 'image') contentParts.push({ type: 'image_url', image_url: { url: asset.url } });
+    if (asset?.type === 'audio') contentParts.push({ type: 'audio_url', audio_url: { url: asset.url } });
+    if (asset?.type === 'video') contentParts.push({ type: 'video_url', video_url: { url: asset.url } });
+
+    renderMessage({ role: 'assistant', content: contentParts }, false);
+}
+
+function cancelActiveJob() {
+    if (activeModalityJob?.controller) activeModalityJob.controller.abort();
+    const modal = activeModalityJob?.modal;
+    if (modal) setModalControls(modal, { isGenerating: false, canRetry: false });
+    activeModalityJob = null;
+    pushUnifiedHistory({ status: 'cancelled', title: 'Job cancelled' });
+}
+
+function retryActiveJob() {
+    if (!activeModalityJob?.retryPayload) return;
+    const modal = activeModalityJob.modal;
+    if (modal === 'image') return startImageJob(activeModalityJob.retryPayload);
+    if (modal === 'audio') return startAudioJob(activeModalityJob.retryPayload);
+    if (modal === 'video') return startVideoJob(activeModalityJob.retryPayload);
+}
+
+function setupModalGenerationHandlers() {
+    if (imageGenerateBtn) imageGenerateBtn.addEventListener('click', () => startImageJob());
+    if (imageCancelBtn) imageCancelBtn.addEventListener('click', cancelActiveJob);
+    if (imageRetryBtn) imageRetryBtn.addEventListener('click', retryActiveJob);
+
+    if (audioGenerateBtn) audioGenerateBtn.addEventListener('click', () => startAudioJob());
+    if (audioCancelBtn) audioCancelBtn.addEventListener('click', cancelActiveJob);
+    if (audioRetryBtn) audioRetryBtn.addEventListener('click', retryActiveJob);
+
+    if (videoGenerateBtn) videoGenerateBtn.addEventListener('click', () => startVideoJob());
+    if (videoCancelBtn) videoCancelBtn.addEventListener('click', cancelActiveJob);
+    if (videoRetryBtn) videoRetryBtn.addEventListener('click', retryActiveJob);
+}
+
+async function startImageJob(payload) {
+    const modal = 'image';
+    try {
+        getApiKeyOrThrow();
+        const controller = new AbortController();
+        activeModalityJob = { modal, controller, retryPayload: payload || null };
+        setModalControls(modal, { isGenerating: true, canRetry: false });
+
+        const p = payload || {
+            prompt: (imagePromptInput?.value || '').trim(),
+            model: imageModelSelect?.value,
+            quality: imageQualitySelect?.value,
+            width: imageWidthInput?.value,
+            height: imageHeightInput?.value,
+            seed: imageSeedInput?.value,
+            enhance: imageEnhanceSelect?.value,
+            negative_prompt: (imageNegativeInput?.value || '').trim(),
+            transparent: imageTransparentSelect?.value,
+            safe: imageSafeInput?.value,
+        };
+
+        if (!p.prompt) throw new Error('Image prompt is required.');
+
+        pushUnifiedHistory({ status: 'queued', title: 'Image job created' });
+
+        const url = new URL(`${IMAGE_ENDPOINT_BASE}${encodeURIComponent(p.prompt)}`);
+        if (p.model) url.searchParams.set('model', p.model);
+        if (p.quality) url.searchParams.set('quality', p.quality);
+        if (p.width) url.searchParams.set('width', p.width);
+        if (p.height) url.searchParams.set('height', p.height);
+        if (p.seed) url.searchParams.set('seed', p.seed);
+        if (p.enhance !== undefined) url.searchParams.set('enhance', p.enhance);
+        if (p.negative_prompt) url.searchParams.set('negative_prompt', p.negative_prompt);
+        if (p.transparent !== undefined) url.searchParams.set('transparent', p.transparent);
+
+        const safe = parseSafeValue(p.safe);
+        if (safe !== undefined) url.searchParams.set('safe', safe);
+
+        const res = await fetch(url.toString(), {
+            method: 'GET',
+            headers: { 'Authorization': `Bearer ${state.settings.apiKey}` },
+            signal: controller.signal,
+        });
+
+        if (!res.ok) {
+            const errJson = await res.json().catch(() => ({}));
+            throw new Error(errJson.error?.message || `HTTP ${res.status}`);
+        }
+
+        const blob = await res.blob();
+        const assetUrl = URL.createObjectURL(blob);
+
+        pushUnifiedHistory({ status: 'succeeded', title: 'Image generated', asset: { type: 'image', url: assetUrl } });
+        setModalControls(modal, { isGenerating: false, canRetry: true });
+        activeModalityJob.retryPayload = p;
+    } catch (e) {
+        if (e?.name === 'AbortError') {
+            setModalControls(modal, { isGenerating: false, canRetry: false });
+            return;
+        }
+        pushUnifiedHistory({ status: 'failed', title: 'Image failed', details: e?.message || String(e) });
+        setModalControls(modal, { isGenerating: false, canRetry: true });
+        activeModalityJob.retryPayload = payload || null;
+    }
+}
+
+async function startAudioJob(payload) {
+    const modal = 'audio';
+    try {
+        getApiKeyOrThrow();
+        const controller = new AbortController();
+        activeModalityJob = { modal, controller, retryPayload: payload || null };
+        setModalControls(modal, { isGenerating: true, canRetry: false });
+
+        const p = payload || {
+            text: (audioTextInput?.value || '').trim(),
+            model: audioModelSelect?.value,
+            response_format: audioFormatSelect?.value,
+            speed: audioSpeedInput?.value,
+            safe: audioSafeInput?.value,
+        };
+
+        if (!p.text) throw new Error('Audio text is required.');
+
+        pushUnifiedHistory({ status: 'queued', title: 'Audio job created' });
+
+        const url = new URL(`${AUDIO_ENDPOINT_BASE}${encodeURIComponent(p.text)}`);
+        if (p.model) url.searchParams.set('model', p.model);
+        if (p.response_format) url.searchParams.set('response_format', p.response_format);
+        if (p.speed) url.searchParams.set('speed', p.speed);
+
+        const safe = parseSafeValue(p.safe);
+        if (safe !== undefined) url.searchParams.set('safe', safe);
+
+        const res = await fetch(url.toString(), {
+            method: 'GET',
+            headers: { 'Authorization': `Bearer ${state.settings.apiKey}` },
+            signal: controller.signal,
+        });
+
+        if (!res.ok) {
+            const errJson = await res.json().catch(() => ({}));
+            throw new Error(errJson.error?.message || `HTTP ${res.status}`);
+        }
+
+        const blob = await res.blob();
+        const assetUrl = URL.createObjectURL(blob);
+
+        pushUnifiedHistory({ status: 'succeeded', title: 'Audio generated', asset: { type: 'audio', url: assetUrl } });
+        setModalControls(modal, { isGenerating: false, canRetry: true });
+        activeModalityJob.retryPayload = p;
+    } catch (e) {
+        if (e?.name === 'AbortError') {
+            setModalControls(modal, { isGenerating: false, canRetry: false });
+            return;
+        }
+        pushUnifiedHistory({ status: 'failed', title: 'Audio failed', details: e?.message || String(e) });
+        setModalControls(modal, { isGenerating: false, canRetry: true });
+        activeModalityJob.retryPayload = payload || null;
+    }
+}
+
+async function startVideoJob(payload) {
+    const modal = 'video';
+    try {
+        getApiKeyOrThrow();
+        const controller = new AbortController();
+        activeModalityJob = { modal, controller, retryPayload: payload || null };
+        setModalControls(modal, { isGenerating: true, canRetry: false });
+
+        const p = payload || {
+            prompt: (videoPromptInput?.value || '').trim(),
+            model: videoModelSelect?.value,
+            duration: videoDurationInput?.value,
+            aspectRatio: videoAspectRatioInput?.value,
+            audio: videoAudioSelect?.value,
+            safe: videoSafeInput?.value,
+        };
+
+        if (!p.prompt) throw new Error('Video prompt is required.');
+
+        pushUnifiedHistory({ status: 'queued', title: 'Video job created' });
+
+        const url = new URL(`${VIDEO_ENDPOINT_BASE}${encodeURIComponent(p.prompt)}`);
+        if (p.model) url.searchParams.set('model', p.model);
+        if (p.duration) url.searchParams.set('duration', p.duration);
+        if (p.aspectRatio) url.searchParams.set('aspectRatio', p.aspectRatio);
+        if (p.audio !== undefined) url.searchParams.set('audio', p.audio);
+
+        const safe = parseSafeValue(p.safe);
+        if (safe !== undefined) url.searchParams.set('safe', safe);
+
+        const res = await fetch(url.toString(), {
+            method: 'GET',
+            headers: { 'Authorization': `Bearer ${state.settings.apiKey}` },
+            signal: controller.signal,
+        });
+
+        if (!res.ok) {
+            const errJson = await res.json().catch(() => ({}));
+            throw new Error(errJson.error?.message || `HTTP ${res.status}`);
+        }
+
+        const blob = await res.blob();
+        const assetUrl = URL.createObjectURL(blob);
+
+        pushUnifiedHistory({ status: 'succeeded', title: 'Video generated', asset: { type: 'video', url: assetUrl } });
+        setModalControls(modal, { isGenerating: false, canRetry: true });
+        activeModalityJob.retryPayload = p;
+    } catch (e) {
+        if (e?.name === 'AbortError') {
+            setModalControls(modal, { isGenerating: false, canRetry: false });
+            return;
+        }
+        pushUnifiedHistory({ status: 'failed', title: 'Video failed', details: e?.message || String(e) });
+        setModalControls(modal, { isGenerating: false, canRetry: true });
+        activeModalityJob.retryPayload = payload || null;
+    }
+}
 
 function parseAuthRedirectAndCleanup() {
     // Pollinations BYOP redirect is expected to deliver the scoped user key/token in the URL

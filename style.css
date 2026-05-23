@@ -79,6 +79,10 @@ body {
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
     display: flex;
+
+    /* Prevent scroll chaining / overscroll bounce from bubbling to the document */
+    overscroll-behavior: none;
+    touch-action: pan-y;
 }
 
 /* Ensure wheel events don’t bubble to the page */
@@ -135,6 +139,8 @@ body {
 .sidebar .chat-history-container,
 .sidebar .chat-history {
     overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
 }
 
 .sidebar.closed {
@@ -616,11 +622,14 @@ input:checked + .slider:before { transform: translateX(14px); }
 /* Chat Container & Messages */
 .chat-container {
     flex: 1;
-    overflow: visible; /* no internal scrollbar */
+    overflow: hidden; /* isolate layout; scroll is on .messages-list */
     overflow-x: hidden;
     display: flex;
     flex-direction: column;
     scroll-behavior: smooth;
+
+    /* prevent scroll chaining */
+    overscroll-behavior: contain;
 }
 
 .messages-list {
@@ -631,8 +640,15 @@ input:checked + .slider:before { transform: translateX(14px); }
     display: flex;
     flex-direction: column;
     gap: 24px;
+
     overflow-x: hidden;
     overflow-y: auto; /* chat-only scroll */
+
+    /* Ensure this region has its own scrolling box */
+    flex: 1;
+    min-height: 0;
+
+    overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
 }
 
@@ -640,6 +656,7 @@ input:checked + .slider:before { transform: translateX(14px); }
 #chatContainer {
     /* Keep the container from affecting scrollbars; messages can still be visible */
     overflow: hidden !important;
+    overscroll-behavior: contain;
 }
 
 /* Remove any layout-driven vertical scrollbar on the main flex panels */
@@ -881,7 +898,7 @@ input:checked + .slider:before { transform: translateX(14px); }
     40% { transform: scale(1); opacity: 1; }
 }
 
-/* Image Interactions */
+/* Image / Media Interactions */
 .user-uploaded-image {
     max-width: 100% !important;
     border-radius: var(--radius-lg);
@@ -891,8 +908,145 @@ input:checked + .slider:before { transform: translateX(14px); }
     cursor: zoom-in;
 }
 
+.msg-audio-wrap,
+.msg-video-wrap,
+.msg-image-wrap {
+    margin: 8px 0;
+}
+
+.msg-video {
+    width: 100%;
+    max-height: 420px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+    background: rgba(0, 0, 0, 0.2);
+}
+
 .user-uploaded-image:hover {
     transform: scale(1.02);
+}
+
+/* Modality consoles */
+.modal-tabs {
+   display: flex;
+   gap: 12px;
+   padding: 18px 24px 0;
+   max-width: var(--max-chat-width);
+   margin: 0 auto;
+   width: 100%;
+   position: sticky;
+   top: var(--header-height);
+   z-index: 600;
+   background: linear-gradient(transparent, var(--bg-primary) 40%);
+}
+
+.modal-tab {
+   background: var(--bg-secondary);
+   border: 1px solid var(--border-color);
+   color: var(--text-secondary);
+   padding: 8px 14px;
+   border-radius: 999px;
+   cursor: pointer;
+   font-weight: 800;
+   font-size: 12px;
+   letter-spacing: 0.02em;
+   transition: all 0.2s;
+}
+
+.modal-tab.active {
+   border-color: var(--accent-color);
+   color: var(--accent-color);
+   box-shadow: 0 0 18px var(--accent-glow);
+}
+
+.modality-console {
+   max-width: var(--max-chat-width);
+   margin: 18px auto 0;
+   padding: 0 24px;
+   width: 100%;
+}
+
+.modality-console h2 {
+   font-size: 16px;
+   margin: 0 0 14px;
+   color: var(--text-primary);
+}
+
+.field {
+   margin-bottom: 14px;
+}
+
+.field label {
+   display: block;
+   font-size: 12px;
+   font-weight: 800;
+   color: var(--text-secondary);
+   margin-bottom: 8px;
+}
+
+.field input,
+.field select,
+.field textarea {
+   width: 100%;
+   background: var(--bg-secondary);
+   border: 1px solid var(--border-color);
+   color: var(--text-primary);
+   border-radius: var(--radius-md);
+   padding: 10px 12px;
+   font-size: 14px;
+   outline: none;
+}
+
+.field textarea {
+   resize: vertical;
+   min-height: 80px;
+}
+
+.grid2 {
+   display: grid;
+   grid-template-columns: 1fr 1fr;
+   gap: 14px;
+}
+
+.console-actions {
+   display: flex;
+   gap: 12px;
+   align-items: center;
+   margin-top: 10px;
+}
+
+.console-actions .primary {
+   background: var(--accent-color);
+   color: white;
+   border: none;
+   padding: 12px 18px;
+   border-radius: var(--radius-md);
+   cursor: pointer;
+   font-weight: 900;
+}
+
+.console-actions .primary:hover {
+   background: var(--accent-hover);
+}
+
+.console-actions .ghost {
+   background: transparent;
+   border: 1px solid var(--border-color);
+   color: var(--text-secondary);
+   padding: 12px 18px;
+   border-radius: var(--radius-md);
+   cursor: pointer;
+   font-weight: 900;
+}
+
+.console-actions .ghost:disabled {
+   opacity: 0.35;
+   cursor: not-allowed;
+}
+
+.console-actions .ghost:hover:not(:disabled) {
+   border-color: var(--text-muted);
+   color: var(--text-primary);
 }
 
 /* Input Floating Panel */
@@ -1133,4 +1287,6 @@ input:checked + .slider:before { transform: translateX(14px); }
         padding-bottom: 4px;
         max-width: calc(100vw - 80px);
     }
+
+   .grid2 { grid-template-columns: 1fr; }
 }
