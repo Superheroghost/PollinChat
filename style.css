@@ -615,13 +615,19 @@ input:checked + .slider:before { transform: translateX(14px); }
     flex-direction: column;
     gap: 24px;
     overflow-x: hidden;
-    overflow-y: visible; /* window-level scrollbar handles scroll */
+    overflow-y: auto; /* chat-only scroll */
     -webkit-overflow-scrolling: touch;
 }
 
 /* Prevent the chat container from ever capturing scrollbars */
 #chatContainer {
-    overflow: visible !important;
+    /* Keep the container from affecting scrollbars; messages can still be visible */
+    overflow: hidden !important;
+}
+
+/* Remove any layout-driven vertical scrollbar on the main flex panels */
+.main-content {
+    overflow: hidden;
 }
 
 .message {
