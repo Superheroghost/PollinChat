@@ -1,0 +1,28 @@
+/* Fix: keep the page scrollbars on the browser edge, not on centered chat */
+html,
+body {
+    height: 100%;
+    overflow: hidden; /* keep app layout stable */
+}
+
+.app-container {
+    height: 100%;
+}
+
+/* The chat container should not be the scroll container if you want the scrollbar on the far right.
+   Make the main content area scroll instead. */
+.main-content {
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.chat-container {
+    overflow: visible; /* disable inner scrollbar */
+    flex: 0 0 auto;
+}
+
+/* Keep input area pinned to bottom of viewport */
+.input-area {
+    position: sticky;
+    bottom: 0;
+}
