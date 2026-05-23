@@ -73,11 +73,11 @@
             <section class="byop-banner hidden" id="byopBanner" aria-live="polite">
                 <div>
                     <p class="banner-title">Bring Your Own Pollen is required</p>
-                    <p class="banner-copy" id="byopBannerCopy">Authorize with Pollinations or paste your own API key. Keys are stored only in this browser.</p>
+                    <p class="banner-copy" id="byopBannerCopy">Authorize with Pollinations. This app stores only the returned scoped key in localStorage.</p>
                 </div>
                 <div class="banner-actions">
                     <button class="primary-btn" id="authorizeByopBtn"><i class="fas fa-arrow-up-right-from-square"></i><span>Authorize</span></button>
-                    <button class="ghost-btn" id="openKeySettingsBtn"><i class="fas fa-key"></i><span>Paste Key</span></button>
+                    <button class="ghost-btn" id="openByopSettingsBtn"><i class="fas fa-sliders"></i><span>BYOP Settings</span></button>
                 </div>
             </section>
 
@@ -292,6 +292,32 @@
                         </section>
                     </div>
                 </section>
+
+                <section class="tab-panel" data-tab="explorer">
+                    <div class="builder-layout">
+                        <section class="surface builder-surface">
+                            <div class="builder-header">
+                                <div>
+                                    <p class="eyebrow">OpenAPI explorer</p>
+                                    <h2>Run any operation in api.json</h2>
+                                </div>
+                                <button class="ghost-btn" id="runExplorerBtn"><i class="fas fa-play"></i><span>Run operation</span></button>
+                            </div>
+                            <div id="explorerBuilder" class="builder-form"></div>
+                        </section>
+                        <section class="surface output-surface">
+                            <div class="builder-header">
+                                <div>
+                                    <p class="eyebrow">Response</p>
+                                    <h2>Explorer output</h2>
+                                </div>
+                                <button class="ghost-btn" id="copyExplorerResponseBtn"><i class="fas fa-copy"></i><span>Copy JSON</span></button>
+                            </div>
+                            <div id="explorerStatus" class="status-box">Select an operation and click run.</div>
+                            <div id="explorerOutput" class="media-output empty-state">No response yet.</div>
+                        </section>
+                    </div>
+                </section>
             </div>
         </main>
     </div>
@@ -306,11 +332,6 @@
                 <button class="icon-btn" id="closeSettings" aria-label="Close settings"><i class="fas fa-times"></i></button>
             </div>
             <div class="modal-body grid-modal-body">
-                <div class="setting-group">
-                    <label for="apiKey">Pollinations API key</label>
-                    <input class="text-input" type="password" id="apiKey" placeholder="Paste a Pollinations API key">
-                    <small class="muted-copy">Stored in localStorage only. Use the BYOP redirect flow or paste a key manually.</small>
-                </div>
                 <div class="setting-group">
                     <label for="apiBaseUrl">Base URL override</label>
                     <input class="text-input" type="url" id="apiBaseUrl" placeholder="https://gen.pollinations.ai">
@@ -390,7 +411,7 @@
                 </div>
                 <div class="action-stack">
                     <button class="primary-btn full-width" id="authorizeByopModalBtn"><i class="fas fa-arrow-up-right-from-square"></i><span>Authorize with Pollinations</span></button>
-                    <button class="ghost-btn full-width" id="openSettingsFromByop"><i class="fas fa-key"></i><span>Paste a key instead</span></button>
+                    <button class="ghost-btn full-width" id="openSettingsFromByop"><i class="fas fa-sliders"></i><span>Open BYOP settings</span></button>
                 </div>
                 <div class="setting-group">
                     <label for="byopPreviewLink">Current authorize URL</label>

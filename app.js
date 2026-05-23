@@ -6,14 +6,15 @@ const STORAGE_KEY_UI = 'pollinations_ui';
 const STORAGE_KEY_OUTPUTS = 'pollinations_outputs';
 const STORAGE_KEY_FORMS = 'pollinations_forms';
 
-const TAB_ORDER = ['chat', 'image', 'audio', 'video', 'embeddings'];
+const TAB_ORDER = ['chat', 'image', 'audio', 'video', 'embeddings', 'explorer'];
 
 const TAB_META = {
     chat: { label: 'Chat/Text', icon: 'fa-comments', description: 'Conversation, reasoning, tools, and vision.' },
     image: { label: 'Image', icon: 'fa-image', description: 'Prompt-based image generation.' },
     audio: { label: 'Audio', icon: 'fa-waveform', description: 'Speech and music from CreateSpeechRequest.' },
     video: { label: 'Video', icon: 'fa-film', description: 'Prompt-based MP4 generation.' },
-    embeddings: { label: 'Embeddings', icon: 'fa-vector-square', description: 'Vector generation and inspection.' }
+    embeddings: { label: 'Embeddings', icon: 'fa-vector-square', description: 'Vector generation and inspection.' },
+    explorer: { label: 'API Explorer', icon: 'fa-compass', description: 'Run any operation from api.json.' }
 };
 
 const GENERATION_TABS = ['image', 'audio', 'video', 'embeddings'];
@@ -93,8 +94,8 @@ const FALLBACK_MODELS = {
 
 const uiState = readStorage(STORAGE_KEY_UI, {
     activeTab: 'chat',
-    modelSearch: { chat: '', image: '', audio: '', video: '', embeddings: '' },
-    favoritesOnly: { chat: false, image: false, audio: false, video: false, embeddings: false }
+    modelSearch: { chat: '', image: '', audio: '', video: '', embeddings: '', explorer: '' },
+    favoritesOnly: { chat: false, image: false, audio: false, video: false, embeddings: false, explorer: false }
 });
 
 const state = {
@@ -112,6 +113,7 @@ const state = {
     models: { chat: [], image: [], audio: [], video: [], embeddings: [] },
     runtimeOutputs: { image: null, audio: null, video: null, embeddings: null },
     lastRequests: { image: null, audio: null, video: null, embeddings: null },
+    explorer: { operations: [], responseText: '' },
     byop: { message: '', type: 'info' }
 };
 
@@ -140,7 +142,6 @@ const elements = {
     settingsModal: document.getElementById('settingsModal'),
     byopModal: document.getElementById('byopModal'),
     commandPaletteModal: document.getElementById('commandPaletteModal'),
-    apiKeyInput: document.getElementById('apiKey'),
     apiBaseUrlInput: document.getElementById('apiBaseUrl'),
     themeSelect: document.getElementById('themeSelect'),
     defaultModelSelect: document.getElementById('defaultModelSelect'),
@@ -161,7 +162,12 @@ const elements = {
     chatInputMeta: document.getElementById('chatInputMeta'),
     chatComposer: document.getElementById('chatComposer'),
     commandPaletteInput: document.getElementById('commandPaletteInput'),
-    commandPaletteList: document.getElementById('commandPaletteList')
+    commandPaletteList: document.getElementById('commandPaletteList'),
+    explorerBuilder: document.getElementById('explorerBuilder'),
+    explorerOutput: document.getElementById('explorerOutput'),
+    explorerStatus: document.getElementById('explorerStatus'),
+    runExplorerBtn: document.getElementById('runExplorerBtn'),
+    copyExplorerResponseBtn: document.getElementById('copyExplorerResponseBtn')
 };
 
 const builderRefs = {
@@ -406,6 +412,10 @@ function normalizeModel(model = {}, fallbackType = 'chat') {
     const inputModalities = model.input_modalities || model.inputModalities || [];
     const outputModalities = model.output_modalities || model.outputModalities || [];
     const tools = model.tools || model.tool_support || [];
+    const pricing = model.pricing || model.price || null;
+    const paidOnly = Boolean(model.paid_only ?? model.paidOnly);
+    const freeTier = model.free === true || model.is_free === true || (!paidOnly && (model.free_tier ?? true));
+    const accessTier = paidOnly ? 'paid' : freeTier ? 'free' : 'unknown';
     return {
         ...model,
         name: model.name,
@@ -415,7 +425,9 @@ function normalizeModel(model = {}, fallbackType = 'chat') {
         output_modalities: outputModalities.length ? outputModalities : [fallbackType === 'video' ? 'video' : fallbackType === 'audio' ? 'audio' : fallbackType === 'image' ? 'image' : 'text'],
         reasoning: Boolean(model.reasoning),
         tools,
-        voices: model.voices || []
+        voices: model.voices || [],
+        pricing,
+        access_tier: accessTier
     };
 }
 
@@ -585,8 +597,14 @@ function renderChatModelMeta() {
 }
 
 function renderModelBadges(model, tab) {
+    const accessBadge = model.access_tier === 'paid'
+        ? '<span class="model-chip">Paid</span>'
+        : model.access_tier === 'free'
+            ? '<span class="model-chip">Free</span>'
+            : '<span class="model-chip">Access unknown</span>';
     const chips = [
         `<span class="model-chip"><strong>${escapeHtml(model.name)}</strong></span>`,
+        accessBadge,
         model.provider ? `<span class="model-chip">${escapeHtml(model.provider)}</span>` : '',
         model.reasoning ? '<span class="model-chip">Reasoning</span>' : '',
         model.input_modalities?.length ? `<span class="model-chip">Input: ${model.input_modalities.join(', ')}</span>` : '',
@@ -1467,14 +1485,169 @@ function renderAllBuilders() {
         renderHistory(tab);
         renderOutput(tab);
     });
+    renderExplorerBuilder();
+}
+
+function listExplorerOperations() {
+    if (!state.spec?.paths) return [];
+    const operations = [];
+    Object.entries(state.spec.paths).forEach(([path, methods]) => {
+        Object.entries(methods || {}).forEach(([method, operation]) => {
+            if (!['get', 'post', 'put', 'patch', 'delete'].includes(method)) return;
+            operations.push({
+                key: `${method.toUpperCase()} ${path}`,
+                path,
+                method,
+                operationId: operation.operationId || `${method}_${path}`,
+                summary: operation.summary || 'Untitled operation',
+                tags: operation.tags || [],
+                parameters: operation.parameters || [],
+                hasBody: Boolean(operation.requestBody)
+            });
+        });
+    });
+    return operations.sort((a, b) => a.key.localeCompare(b.key));
+}
+
+function buildExplorerDefaults(operation) {
+    if (!operation) return { pathParams: {}, queryParams: {}, body: {} };
+    const pathParams = {};
+    const queryParams = {};
+    operation.parameters.forEach((parameter) => {
+        const target = parameter.in === 'path' ? pathParams : parameter.in === 'query' ? queryParams : null;
+        if (!target) return;
+        if (parameter.schema?.default !== undefined) target[parameter.name] = parameter.schema.default;
+    });
+    return { pathParams, queryParams, body: {} };
+}
+
+function renderExplorerBuilder() {
+    state.explorer.operations = listExplorerOperations();
+    const stored = state.tabForms.explorer || {};
+    const selectedKey = stored.operationKey && state.explorer.operations.find((item) => item.key === stored.operationKey)
+        ? stored.operationKey
+        : state.explorer.operations[0]?.key;
+    const operation = state.explorer.operations.find((item) => item.key === selectedKey);
+    const defaults = buildExplorerDefaults(operation);
+    const value = {
+        operationKey: selectedKey || '',
+        pathParams: stored.pathParams || defaults.pathParams,
+        queryParams: stored.queryParams || defaults.queryParams,
+        body: stored.body || defaults.body
+    };
+    state.tabForms.explorer = value;
+    saveForms();
+
+    elements.explorerBuilder.innerHTML = `
+        <div class="field-group full-span">
+            <label class="field-label" for="explorerOperationSelect">Operation</label>
+            <select class="select-input" id="explorerOperationSelect">
+                ${state.explorer.operations.map((item) => `<option value="${item.key}" ${item.key === value.operationKey ? 'selected' : ''}>${item.key} — ${escapeHtml(item.summary)}</option>`).join('')}
+            </select>
+            <div class="field-help">${operation ? escapeHtml((operation.tags || []).join(' · ') || 'No tags') : 'No operations found in api.json.'}</div>
+        </div>
+        <div class="form-grid">
+            <div class="field-group">
+                <label class="field-label" for="explorerPathParams">Path params JSON</label>
+                <textarea class="text-input textarea-large" id="explorerPathParams">${escapeHtml(JSON.stringify(value.pathParams, null, 2))}</textarea>
+            </div>
+            <div class="field-group">
+                <label class="field-label" for="explorerQueryParams">Query params JSON</label>
+                <textarea class="text-input textarea-large" id="explorerQueryParams">${escapeHtml(JSON.stringify(value.queryParams, null, 2))}</textarea>
+            </div>
+            <div class="field-group full-span">
+                <label class="field-label" for="explorerBody">Request body JSON</label>
+                <textarea class="text-input textarea-large" id="explorerBody">${escapeHtml(JSON.stringify(value.body, null, 2))}</textarea>
+            </div>
+        </div>
+        <div class="field-help">This runner executes any OpenAPI operation from <code>api.json</code>, including image/audio/video binary responses.</div>
+    `;
+
+    const saveExplorerState = () => {
+        const operationKey = document.getElementById('explorerOperationSelect').value;
+        const safeParse = (text) => {
+            try { return text.trim() ? JSON.parse(text) : {}; } catch { return null; }
+        };
+        const pathParams = safeParse(document.getElementById('explorerPathParams').value);
+        const queryParams = safeParse(document.getElementById('explorerQueryParams').value);
+        const body = safeParse(document.getElementById('explorerBody').value);
+        if (pathParams === null || queryParams === null || body === null) return false;
+        state.tabForms.explorer = { operationKey, pathParams, queryParams, body };
+        saveForms();
+        return true;
+    };
+
+    document.getElementById('explorerOperationSelect').addEventListener('change', (event) => {
+        state.tabForms.explorer = { operationKey: event.target.value };
+        saveForms();
+        renderExplorerBuilder();
+    });
+
+    ['explorerPathParams', 'explorerQueryParams', 'explorerBody'].forEach((id) => {
+        document.getElementById(id).addEventListener('input', saveExplorerState);
+    });
+}
+
+function fillPathTemplate(path, pathParams) {
+    return path.replace(/\{([^}]+)\}/g, (match, key) => {
+        const value = pathParams?.[key];
+        if (value === undefined || value === null || value === '') throw new Error(`Missing required path param: ${key}`);
+        return encodeURIComponent(String(value));
+    });
+}
+
+async function runExplorerOperation() {
+    const value = state.tabForms.explorer || {};
+    const operation = state.explorer.operations.find((item) => item.key === value.operationKey);
+    if (!operation) throw new Error('Select an operation first.');
+    const path = fillPathTemplate(operation.path, value.pathParams || {});
+    const query = value.queryParams || {};
+    const body = operation.hasBody ? value.body || {} : undefined;
+
+    elements.explorerStatus.textContent = `Running ${operation.key}...`;
+    const response = await apiRequest(path, {
+        method: operation.method.toUpperCase(),
+        query,
+        body: operation.hasBody ? body : undefined,
+        responseType: 'blob',
+        requiresAuth: false
+    });
+
+    const mime = response.type || 'application/octet-stream';
+    if (mime.includes('application/json') || mime.includes('text/')) {
+        const text = await response.text();
+        state.explorer.responseText = text;
+        let pretty = text;
+        try { pretty = JSON.stringify(JSON.parse(text), null, 2); } catch {}
+        elements.explorerOutput.classList.remove('empty-state');
+        elements.explorerOutput.innerHTML = `<textarea class="text-input textarea-large" readonly>${escapeHtml(pretty)}</textarea>`;
+        elements.explorerStatus.className = 'status-box success';
+        elements.explorerStatus.textContent = `${operation.key} completed (${mime}).`;
+        return;
+    }
+
+    const url = URL.createObjectURL(response);
+    state.explorer.responseText = '';
+    elements.explorerOutput.classList.remove('empty-state');
+    if (mime.startsWith('image/')) {
+        elements.explorerOutput.innerHTML = `<img src="${url}" alt="Explorer image response" class="generated-media">`;
+    } else if (mime.startsWith('audio/')) {
+        elements.explorerOutput.innerHTML = `<audio controls src="${url}"></audio>`;
+    } else if (mime.startsWith('video/')) {
+        elements.explorerOutput.innerHTML = `<video controls src="${url}" class="generated-media"></video>`;
+    } else {
+        elements.explorerOutput.innerHTML = `<div class="output-card"><a class="ghost-btn" href="${url}" download="explorer-response.bin"><i class="fas fa-download"></i><span>Download ${escapeHtml(mime)}</span></a></div>`;
+    }
+    elements.explorerStatus.className = 'status-box success';
+    elements.explorerStatus.textContent = `${operation.key} completed (${mime}).`;
 }
 
 function renderByopState() {
     const hasKey = Boolean(state.settings.apiKey);
     elements.byopBanner.classList.toggle('hidden', hasKey);
     elements.byopBannerCopy.textContent = hasKey
-        ? 'API key stored locally in this browser.'
-        : state.byop.message || 'Authorize with Pollinations or paste your own API key. Keys are stored only in this browser.';
+        ? 'Scoped key stored from BYOP redirect in this browser.'
+        : state.byop.message || 'Authorize with Pollinations to continue. Manual key entry is disabled.';
     elements.byopPreviewLink.value = buildAuthorizeUrl();
 }
 
@@ -1487,7 +1660,6 @@ function closeModal(modal) {
 }
 
 function openSettings() {
-    elements.apiKeyInput.value = state.settings.apiKey;
     elements.apiBaseUrlInput.value = state.settings.apiBaseUrl;
     elements.themeSelect.value = state.settings.theme;
     elements.defaultModelSelect.value = state.settings.defaultModel;
@@ -1561,13 +1733,12 @@ function bindStaticEvents() {
     document.getElementById('authorizeByopBtn').addEventListener('click', () => { window.location.href = buildAuthorizeUrl(); });
     document.getElementById('authorizeByopModalBtn').addEventListener('click', () => { window.location.href = buildAuthorizeUrl(); });
     document.getElementById('closeByopModal').addEventListener('click', () => closeModal(elements.byopModal));
-    document.getElementById('openKeySettingsBtn').addEventListener('click', () => { closeModal(elements.byopModal); openSettings(); });
+    document.getElementById('openByopSettingsBtn').addEventListener('click', () => { closeModal(elements.byopModal); openSettings(); });
     document.getElementById('openSettingsFromByop').addEventListener('click', () => { closeModal(elements.byopModal); openSettings(); });
     document.getElementById('commandPaletteBtn').addEventListener('click', () => { renderCommandPalette(); openModal(elements.commandPaletteModal); elements.commandPaletteInput.value = ''; elements.commandPaletteInput.focus(); });
     document.getElementById('closeCommandPalette').addEventListener('click', () => closeModal(elements.commandPaletteModal));
 
     document.getElementById('saveSettings').addEventListener('click', () => {
-        state.settings.apiKey = elements.apiKeyInput.value.trim();
         state.settings.apiBaseUrl = elements.apiBaseUrlInput.value.trim();
         state.settings.theme = elements.themeSelect.value;
         state.settings.defaultModel = elements.defaultModelSelect.value;
@@ -1588,7 +1759,6 @@ function bindStaticEvents() {
     document.getElementById('clearStoredKeyBtn').addEventListener('click', () => {
         state.settings.apiKey = '';
         saveSettings();
-        elements.apiKeyInput.value = '';
         renderByopState();
         renderStatusPills();
         announce('Stored API key cleared.');
@@ -1697,6 +1867,23 @@ function bindStaticEvents() {
         saveOutputs();
         renderHistory(button.dataset.clearHistory);
     }));
+
+    elements.runExplorerBtn.addEventListener('click', async () => {
+        try {
+            await runExplorerOperation();
+        } catch (error) {
+            elements.explorerStatus.className = 'status-box error';
+            elements.explorerStatus.textContent = error.message;
+        }
+    });
+
+    elements.copyExplorerResponseBtn.addEventListener('click', () => {
+        if (!state.explorer.responseText) {
+            announce('No text response to copy.');
+            return;
+        }
+        copyText(state.explorer.responseText, 'Explorer response copied.');
+    });
 
     document.body.addEventListener('click', (event) => {
         const restore = event.target.closest('[data-restore]');
