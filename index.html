@@ -10,201 +10,434 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/tokyo-night-dark.min.css">
-    <script type="importmap">
-        {
-          "imports": {
-            "marked": "https://esm.sh/marked",
-            "highlight.js": "https://esm.sh/highlight.js"
-          }
-        }
-      </script>
     <script>
-        // Apply theme immediately to prevent flickering
-        (function() {
+        (function () {
             try {
                 const settings = JSON.parse(localStorage.getItem('pollinations_settings'));
-                if (settings && settings.theme) {
-                    const theme = settings.theme;
-                    if (theme === 'system') {
-                        const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                        document.documentElement.className = isDark ? 'dark-theme' : 'light-theme';
-                    } else {
-                        document.documentElement.className = theme + '-theme';
-                    }
+                const theme = settings?.theme || 'light';
+                if (theme === 'system') {
+                    document.documentElement.className = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark-theme' : 'light-theme';
                 } else {
-                    document.documentElement.className = 'light-theme';
+                    document.documentElement.className = `${theme}-theme`;
                 }
-            } catch(e) {
+            } catch (error) {
                 document.documentElement.className = 'light-theme';
             }
         })();
-        
-        // Default model will be applied after dynamic model loading in app.js
     </script>
 </head>
 <body>
     <div class="app-container">
-        <!-- Sidebar -->
         <aside class="sidebar closed" id="sidebar">
             <div class="sidebar-header">
-                <button class="new-chat-btn" id="newChatBtn">
-                    <i class="fas fa-plus"></i> New Chat
+                <button class="primary-btn full-width" id="newChatBtn">
+                    <i class="fas fa-plus"></i>
+                    <span>New Chat</span>
                 </button>
-                <button class="close-sidebar-btn" id="closeSidebarBtn" title="Close Sidebar">
+                <button class="icon-btn" id="closeSidebarBtn" aria-label="Close sidebar">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-            <div class="chat-history-container">
-                <div class="history-label">Recent Chats</div>
-                <div class="chat-history" id="chatHistory">
-                    <!-- Chat items will be injected here -->
+            <div class="sidebar-section">
+                <div class="section-heading">
+                    <span>Recent chats</span>
+                    <button class="ghost-btn tiny" id="exportChatsBtn">Export</button>
                 </div>
+                <div class="chat-history" id="chatHistory"></div>
             </div>
             <div class="sidebar-footer">
-                <button class="delete-all-sidebar-btn" id="deleteAllSidebarBtn">
-                    <i class="fas fa-trash-alt"></i> Clear All
-                </button>
-                <button class="settings-btn" id="settingsBtn">
-                    <i class="fas fa-cog"></i> Settings
-                </button>
+                <button class="ghost-btn full-width" id="deleteAllSidebarBtn"><i class="fas fa-trash"></i><span>Clear chats</span></button>
+                <button class="ghost-btn full-width" id="settingsBtn"><i class="fas fa-cog"></i><span>Settings</span></button>
             </div>
         </aside>
 
-        <!-- Main Content -->
-        <main class="main-content">
+        <main class="main-content" id="mainContent">
             <header class="top-bar">
-                <button class="mobile-menu-btn" id="mobileMenuBtn">
-                    <i class="fas fa-bars"></i>
-                </button>
-                <div class="model-selector-container">
-                    <div id="toolControls" class="tool-controls">
-                        <button id="searchToggle" class="tool-toggle-btn" title="Enable Google Search" style="display: none;">
-                            <i class="fas fa-search"></i>
-                        </button>
-                        <button id="codeToggle" class="tool-toggle-btn" title="Enable Code Execution" style="display: none;">
-                            <i class="fas fa-terminal"></i>
-                        </button>
+                <div class="top-bar-start">
+                    <button class="icon-btn" id="mobileMenuBtn" aria-label="Open sidebar">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <div>
+                        <p class="eyebrow">Pollinations workspace</p>
+                        <h1>PollinChat</h1>
                     </div>
-                    <div id="reasoningControls" class="reasoning-controls" style="display: none;">
-                        <label class="switch-container" id="thinkingToggleContainer">
-                            <span class="label-text">Thinking</span>
-                            <input type="checkbox" id="thinkingToggle" checked>
-                            <span class="slider"></span>
-                        </label>
-                        <select id="reasoningEffort" class="effort-select" style="display: none;">
-                            <option value="none">None</option>
-                            <option value="minimal">Minimal</option>
-                            <option value="low">Low</option>
-                            <option value="medium" selected>Medium</option>
-                            <option value="high">High</option>
-                            <option value="xhigh">X-High</option>
-                        </select>
-                    </div>
-                    <select id="modelSelector" class="model-select">
-                        <!-- Models populated dynamically from API -->
-                    </select>
                 </div>
+                <div class="top-bar-center" id="globalStatusPills"></div>
                 <div class="top-bar-actions">
-                    <!-- Actions like export/share could go here -->
+                    <button class="ghost-btn" id="commandPaletteBtn"><i class="fas fa-terminal"></i><span>Command Menu</span><kbd>⌘K</kbd></button>
+                    <button class="ghost-btn" id="openByopModalBtn"><i class="fas fa-key"></i><span>BYOP</span></button>
+                    <button class="ghost-btn" id="topBarSettingsBtn"><i class="fas fa-sliders"></i><span>Settings</span></button>
                 </div>
             </header>
 
-            <div class="chat-container" id="chatContainer">
-                <div class="welcome-screen" id="welcomeScreen">
-                    <div class="welcome-content">
-                        <div class="logo-container">
-                            <img src="logo.png" alt="Pollinations AI" class="welcome-logo">
-                        </div>
-                        <h1>PollinChat</h1>
-                        <div class="suggestions">
-                            <button class="suggestion-card" onclick="setInput('Write a Python script to scrape a website.')">
-                                <i class="fas fa-code"></i>
-                                <div class="suggestion-text">
-                                    <p>Write a script</p>
-                                    <span>to scrape a website</span>
-                                </div>
-                            </button>
-                            <button class="suggestion-card" onclick="setInput('Explain quantum computing in simple terms.')">
-                                <i class="fas fa-lightbulb"></i>
-                                <div class="suggestion-text">
-                                    <p>Explain</p>
-                                    <span>quantum computing</span>
-                                </div>
-                            </button>
-                            <button class="suggestion-card" onclick="setInput('Help me write a professional email about a project delay.')">
-                                <i class="fas fa-pen-nib"></i>
-                                <div class="suggestion-text">
-                                    <p>Write an email</p>
-                                    <span>about a project delay</span>
-                                </div>
-                            </button>
-                            <button class="suggestion-card" onclick="setInput('Create a 7-day keto meal plan.')">
-                                <i class="fas fa-utensils"></i>
-                                <div class="suggestion-text">
-                                    <p>Plan a meal</p>
-                                    <span>7-day keto diet</span>
-                                </div>
-                            </button>
-                        </div>
-                    </div>
+            <section class="byop-banner hidden" id="byopBanner" aria-live="polite">
+                <div>
+                    <p class="banner-title">Bring Your Own Pollen is required</p>
+                    <p class="banner-copy" id="byopBannerCopy">Authorize with Pollinations. This app stores only the returned scoped key in localStorage.</p>
                 </div>
-                <div class="messages-list" id="messagesList"></div>
-            </div>
+                <div class="banner-actions">
+                    <button class="primary-btn" id="authorizeByopBtn"><i class="fas fa-arrow-up-right-from-square"></i><span>Authorize</span></button>
+                    <button class="ghost-btn" id="openByopSettingsBtn"><i class="fas fa-sliders"></i><span>BYOP Settings</span></button>
+                </div>
+            </section>
 
-            <footer class="input-area">
-                <div class="input-wrapper">
-                    <div id="imagePreviewContainer" class="image-preview-container"></div>
-                    <div class="input-row">
-                        <button id="attachBtn" class="attach-btn" title="Attach image">
-                            <i class="fas fa-paperclip"></i>
-                        </button>
-                        <input type="file" id="imageInput" accept="image/*" style="display: none;">
-                        <textarea id="chatInput" placeholder="Message PollinChat..." rows="1"></textarea>
-                        <button id="sendBtn" class="send-btn" disabled>
-                            <i class="fas fa-arrow-up"></i>
-                        </button>
+            <nav class="tab-bar" id="modalityTabs" aria-label="Modality tabs"></nav>
+
+            <div class="workspace" id="workspace">
+                <section class="tab-panel active" id="chatTabPanel" data-tab="chat">
+                    <div class="chat-layout">
+                        <section class="surface chat-stream-surface">
+                            <div class="chat-toolbar">
+                                <div class="toolbar-block model-block">
+                                    <label for="chatModelSearch">Chat model</label>
+                                    <div class="model-picker-row">
+                                        <input id="chatModelSearch" class="text-input compact" type="search" placeholder="Search chat models">
+                                        <label class="check-chip"><input type="checkbox" id="chatFavoritesOnly"><span>Favorites</span></label>
+                                        <button class="icon-btn" id="toggleChatFavorite" aria-label="Favorite selected chat model"><i class="fas fa-star"></i></button>
+                                    </div>
+                                    <select id="chatModelSelector" class="select-input"></select>
+                                    <div class="model-meta" id="chatModelMeta"></div>
+                                </div>
+                                <div class="toolbar-block tool-block">
+                                    <label>Chat controls</label>
+                                    <div class="tool-controls" id="toolControls">
+                                        <button id="searchToggle" class="toggle-btn" type="button" title="Enable Google Search"><i class="fas fa-search"></i><span>Search</span></button>
+                                        <button id="codeToggle" class="toggle-btn" type="button" title="Enable Code Execution"><i class="fas fa-terminal"></i><span>Code</span></button>
+                                        <label class="check-chip" id="thinkingToggleContainer"><input type="checkbox" id="thinkingToggle" checked><span>Thinking</span></label>
+                                        <select id="reasoningEffort" class="select-input compact-select"></select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="welcome-screen" id="welcomeScreen">
+                                <div class="welcome-content">
+                                    <img src="logo.png" alt="Pollinations AI" class="welcome-logo">
+                                    <h2>One workspace for text, image, audio, video, and embeddings.</h2>
+                                    <p>Keep your chat history, switch modalities instantly, and drive every builder from the checked-in OpenAPI spec.</p>
+                                    <div class="suggestions" id="welcomeSuggestions">
+                                        <button class="suggestion-card" data-suggestion="Summarize the latest changes in my repo and suggest three next steps."><i class="fas fa-clipboard-list"></i><span>Summarize a repo and suggest next steps</span></button>
+                                        <button class="suggestion-card" data-suggestion="Describe this image in detail and propose three alternate prompts for it."><i class="fas fa-image"></i><span>Vision prompt refinement</span></button>
+                                        <button class="suggestion-card" data-suggestion="Create a compact launch plan for a new SaaS product, with milestones."><i class="fas fa-rocket"></i><span>Product launch planning</span></button>
+                                        <button class="suggestion-card" data-suggestion="Write a polished customer update about a delay, with a reassuring tone."><i class="fas fa-envelope-open-text"></i><span>Customer communication drafting</span></button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="messages-list" id="messagesList"></div>
+                            <div class="scroll-anchor" id="chatScrollAnchor"></div>
+                        </section>
+
+                        <aside class="surface chat-sidecar">
+                            <div class="sidecar-card">
+                                <div class="section-heading"><span>Chat shortcuts</span></div>
+                                <ul class="shortcut-list">
+                                    <li><kbd>N</kbd><span>New chat</span></li>
+                                    <li><kbd>/</kbd><span>Focus composer</span></li>
+                                    <li><kbd>⌘K</kbd><span>Command palette</span></li>
+                                    <li><kbd>Alt+1…5</kbd><span>Switch tabs</span></li>
+                                </ul>
+                            </div>
+                            <div class="sidecar-card">
+                                <div class="section-heading"><span>Chat utilities</span></div>
+                                <div class="action-stack">
+                                    <button class="ghost-btn full-width" id="scrollToBottomBtn"><i class="fas fa-arrow-down"></i><span>Scroll to latest</span></button>
+                                    <button class="ghost-btn full-width" id="copyTranscriptBtn"><i class="fas fa-copy"></i><span>Copy transcript</span></button>
+                                    <button class="ghost-btn full-width" id="downloadTranscriptBtn"><i class="fas fa-download"></i><span>Download transcript</span></button>
+                                </div>
+                            </div>
+                            <div class="sidecar-card" id="chatActiveChatCard">
+                                <div class="section-heading"><span>Active chat</span></div>
+                                <div id="activeChatSummary" class="muted-copy">Start a conversation to see message counts, images, and timestamps here.</div>
+                            </div>
+                        </aside>
                     </div>
-                </div>
-                <p class="disclaimer">Powered by Pollinations.ai. LLMs can make mistakes. Verify important info.</p>
-            </footer>
+
+                    <footer class="input-area" id="chatComposer">
+                        <div class="input-wrapper">
+                            <div class="image-preview-container" id="imagePreviewContainer"></div>
+                            <div class="composer-actions">
+                                <button class="icon-btn" id="attachBtn" aria-label="Attach image"><i class="fas fa-paperclip"></i></button>
+                                <input type="file" id="imageInput" accept="image/*" hidden>
+                                <textarea id="chatInput" placeholder="Message PollinChat..." rows="1"></textarea>
+                                <button class="primary-icon-btn" id="sendBtn" disabled aria-label="Send message"><i class="fas fa-arrow-up"></i></button>
+                            </div>
+                            <div class="composer-footer">
+                                <span id="chatInputMeta">Enter to send · Shift+Enter for a new line</span>
+                                <span class="muted-copy">Stored locally · Keys never leave your browser except on Pollinations API requests</span>
+                            </div>
+                        </div>
+                    </footer>
+                </section>
+
+                <section class="tab-panel" data-tab="image">
+                    <div class="builder-layout">
+                        <section class="surface builder-surface">
+                            <div class="builder-header">
+                                <div>
+                                    <p class="eyebrow">Image generation</p>
+                                    <h2>Create image request</h2>
+                                </div>
+                                <button class="ghost-btn" data-run="image"><i class="fas fa-play"></i><span>Generate</span></button>
+                            </div>
+                            <div id="imageBuilder"></div>
+                        </section>
+                        <section class="surface output-surface">
+                            <div class="builder-header">
+                                <div>
+                                    <p class="eyebrow">Output</p>
+                                    <h2>Latest image</h2>
+                                </div>
+                                <div class="history-actions">
+                                    <button class="ghost-btn" data-retry="image"><i class="fas fa-rotate-right"></i><span>Retry</span></button>
+                                    <button class="ghost-btn" data-export-history="image"><i class="fas fa-file-export"></i><span>Export history</span></button>
+                                </div>
+                            </div>
+                            <div id="imageStatus" class="status-box">Generate an image to preview it here.</div>
+                            <div id="imageOutput" class="media-output empty-state">No image yet.</div>
+                            <div class="section-heading"><span>Recent images</span><button class="ghost-btn tiny" data-clear-history="image">Clear</button></div>
+                            <div id="imageHistory" class="history-list"></div>
+                        </section>
+                    </div>
+                </section>
+
+                <section class="tab-panel" data-tab="audio">
+                    <div class="builder-layout">
+                        <section class="surface builder-surface">
+                            <div class="builder-header">
+                                <div>
+                                    <p class="eyebrow">Audio generation</p>
+                                    <h2>CreateSpeechRequest</h2>
+                                </div>
+                                <button class="ghost-btn" data-run="audio"><i class="fas fa-play"></i><span>Generate</span></button>
+                            </div>
+                            <div id="audioBuilder"></div>
+                        </section>
+                        <section class="surface output-surface">
+                            <div class="builder-header">
+                                <div>
+                                    <p class="eyebrow">Output</p>
+                                    <h2>Latest audio</h2>
+                                </div>
+                                <div class="history-actions">
+                                    <button class="ghost-btn" data-retry="audio"><i class="fas fa-rotate-right"></i><span>Retry</span></button>
+                                    <button class="ghost-btn" data-export-history="audio"><i class="fas fa-file-export"></i><span>Export history</span></button>
+                                </div>
+                            </div>
+                            <div id="audioStatus" class="status-box">Generate speech or music to play it back here.</div>
+                            <div id="audioOutput" class="media-output empty-state">No audio yet.</div>
+                            <div class="section-heading"><span>Recent audio runs</span><button class="ghost-btn tiny" data-clear-history="audio">Clear</button></div>
+                            <div id="audioHistory" class="history-list"></div>
+                        </section>
+                    </div>
+                </section>
+
+                <section class="tab-panel" data-tab="video">
+                    <div class="builder-layout">
+                        <section class="surface builder-surface">
+                            <div class="builder-header">
+                                <div>
+                                    <p class="eyebrow">Video generation</p>
+                                    <h2>Create video request</h2>
+                                </div>
+                                <button class="ghost-btn" data-run="video"><i class="fas fa-play"></i><span>Generate</span></button>
+                            </div>
+                            <div id="videoBuilder"></div>
+                        </section>
+                        <section class="surface output-surface">
+                            <div class="builder-header">
+                                <div>
+                                    <p class="eyebrow">Output</p>
+                                    <h2>Latest video</h2>
+                                </div>
+                                <div class="history-actions">
+                                    <button class="ghost-btn" data-retry="video"><i class="fas fa-rotate-right"></i><span>Retry</span></button>
+                                    <button class="ghost-btn" data-export-history="video"><i class="fas fa-file-export"></i><span>Export history</span></button>
+                                </div>
+                            </div>
+                            <div id="videoStatus" class="status-box">Generate a video to preview it here.</div>
+                            <div id="videoOutput" class="media-output empty-state">No video yet.</div>
+                            <div class="section-heading"><span>Recent videos</span><button class="ghost-btn tiny" data-clear-history="video">Clear</button></div>
+                            <div id="videoHistory" class="history-list"></div>
+                        </section>
+                    </div>
+                </section>
+
+                <section class="tab-panel" data-tab="embeddings">
+                    <div class="builder-layout">
+                        <section class="surface builder-surface">
+                            <div class="builder-header">
+                                <div>
+                                    <p class="eyebrow">Embeddings</p>
+                                    <h2>Create embeddings request</h2>
+                                </div>
+                                <button class="ghost-btn" data-run="embeddings"><i class="fas fa-play"></i><span>Generate</span></button>
+                            </div>
+                            <div id="embeddingsBuilder"></div>
+                        </section>
+                        <section class="surface output-surface">
+                            <div class="builder-header">
+                                <div>
+                                    <p class="eyebrow">Output</p>
+                                    <h2>Latest embedding</h2>
+                                </div>
+                                <div class="history-actions">
+                                    <button class="ghost-btn" data-retry="embeddings"><i class="fas fa-rotate-right"></i><span>Retry</span></button>
+                                    <button class="ghost-btn" data-export-history="embeddings"><i class="fas fa-file-export"></i><span>Export history</span></button>
+                                </div>
+                            </div>
+                            <div id="embeddingsStatus" class="status-box">Generate embeddings to inspect vector output here.</div>
+                            <div id="embeddingsOutput" class="media-output empty-state">No embedding yet.</div>
+                            <div class="section-heading"><span>Recent embeddings</span><button class="ghost-btn tiny" data-clear-history="embeddings">Clear</button></div>
+                            <div id="embeddingsHistory" class="history-list"></div>
+                        </section>
+                    </div>
+                </section>
+
+                <section class="tab-panel" data-tab="explorer">
+                    <div class="builder-layout">
+                        <section class="surface builder-surface">
+                            <div class="builder-header">
+                                <div>
+                                    <p class="eyebrow">OpenAPI explorer</p>
+                                    <h2>Run any operation in api.json</h2>
+                                </div>
+                                <button class="ghost-btn" id="runExplorerBtn"><i class="fas fa-play"></i><span>Run operation</span></button>
+                            </div>
+                            <div id="explorerBuilder" class="builder-form"></div>
+                        </section>
+                        <section class="surface output-surface">
+                            <div class="builder-header">
+                                <div>
+                                    <p class="eyebrow">Response</p>
+                                    <h2>Explorer output</h2>
+                                </div>
+                                <button class="ghost-btn" id="copyExplorerResponseBtn"><i class="fas fa-copy"></i><span>Copy JSON</span></button>
+                            </div>
+                            <div id="explorerStatus" class="status-box">Select an operation and click run.</div>
+                            <div id="explorerOutput" class="media-output empty-state">No response yet.</div>
+                        </section>
+                    </div>
+                </section>
+            </div>
         </main>
     </div>
 
-    <!-- Settings Modal -->
     <div class="modal-overlay" id="settingsModal">
-        <div class="modal">
+        <div class="modal wide-modal">
             <div class="modal-header">
-                <h2>Settings</h2>
-                <button class="close-modal" id="closeSettings"><i class="fas fa-times"></i></button>
+                <div>
+                    <p class="eyebrow">Settings</p>
+                    <h2>API, theme, and defaults</h2>
+                </div>
+                <button class="icon-btn" id="closeSettings" aria-label="Close settings"><i class="fas fa-times"></i></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body grid-modal-body">
                 <div class="setting-group">
-                    <label for="apiKey">Pollinations API Key</label>
-                    <input type="password" id="apiKey" placeholder="Enter your API Key (Required)">
-                    <small>Get yours at <a href="https://pollinations.ai" target="_blank">pollinations.ai</a></small>
+                    <label for="apiBaseUrl">Base URL override</label>
+                    <input class="text-input" type="url" id="apiBaseUrl" placeholder="https://gen.pollinations.ai">
+                    <small class="muted-copy">Defaults to <span id="specBaseUrlLabel"></span> from <code>api.json</code>.</small>
                 </div>
                 <div class="setting-group">
                     <label for="themeSelect">Theme</label>
-                    <select id="themeSelect">
+                    <select class="select-input" id="themeSelect">
                         <option value="dark">Dark</option>
                         <option value="light">Light</option>
                         <option value="system">System</option>
                     </select>
                 </div>
                 <div class="setting-group">
-                    <label for="defaultModelSelect">Default Model</label>
-                    <select id="defaultModelSelect">
-                        <!-- Models populated dynamically from API -->
-                    </select>
+                    <label for="defaultModelSelect">Default chat model</label>
+                    <select class="select-input" id="defaultModelSelect"></select>
                 </div>
-
+                <div class="setting-group">
+                    <label for="byopClientId">BYOP client_id (optional)</label>
+                    <input class="text-input" type="text" id="byopClientId" placeholder="pk_...">
+                    <small class="muted-copy">Optional. When present, Pollinations can attribute the authorization screen to your app.</small>
+                </div>
+                <div class="setting-group">
+                    <label for="byopRedirectUri">BYOP redirect URI</label>
+                    <input class="text-input" type="url" id="byopRedirectUri" placeholder="https://example.com/callback">
+                    <small class="muted-copy">Defaults to the current page URL if left empty.</small>
+                </div>
+                <div class="setting-group">
+                    <label for="byopScope">BYOP scope</label>
+                    <input class="text-input" type="text" id="byopScope" placeholder="usage keys">
+                    <small class="muted-copy">Optional. Space or comma separated scopes for the authorize link.</small>
+                </div>
+                <div class="setting-group">
+                    <label for="byopModels">BYOP model allowlist</label>
+                    <input class="text-input" type="text" id="byopModels" placeholder="flux,openai,gptimage">
+                    <small class="muted-copy">Optional. Restrict the authorized key to specific models.</small>
+                </div>
+                <div class="setting-group">
+                    <label for="byopBudget">BYOP budget</label>
+                    <input class="text-input" type="number" id="byopBudget" placeholder="10" min="0">
+                    <small class="muted-copy">Optional pollen cap passed into the authorize URL.</small>
+                </div>
+                <div class="setting-group">
+                    <label for="byopExpiry">BYOP expiry (days)</label>
+                    <input class="text-input" type="number" id="byopExpiry" placeholder="7" min="1">
+                    <small class="muted-copy">Optional lifetime for the returned scoped key.</small>
+                </div>
             </div>
-            <div class="modal-footer">
-                <button class="save-btn" id="saveSettings">Save Changes</button>
+            <div class="modal-footer between">
+                <div class="history-actions">
+                    <button class="ghost-btn" id="clearStoredKeyBtn"><i class="fas fa-ban"></i><span>Clear key</span></button>
+                    <button class="ghost-btn" id="resetDefaultsBtn"><i class="fas fa-rotate-left"></i><span>Reset saved defaults</span></button>
+                </div>
+                <button class="primary-btn" id="saveSettings"><i class="fas fa-save"></i><span>Save changes</span></button>
             </div>
         </div>
     </div>
+
+    <div class="modal-overlay" id="byopModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div>
+                    <p class="eyebrow">Bring Your Own Pollen</p>
+                    <h2>Authorize this browser</h2>
+                </div>
+                <button class="icon-btn" id="closeByopModal" aria-label="Close BYOP dialog"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body stack-gap">
+                <p class="muted-copy">This app follows the redirect-based BYOP flow described in <code>api.json</code>. Pollinations returns a user-authorized key in the URL fragment, and the app saves it in <code>localStorage</code> only.</p>
+                <div class="info-card">
+                    <strong>How it works</strong>
+                    <ol>
+                        <li>Click <em>Authorize with Pollinations</em>.</li>
+                        <li>Approve access on Pollinations.</li>
+                        <li>Return to this page and let PollinChat capture <code>#api_key=...</code>.</li>
+                    </ol>
+                </div>
+                <div class="action-stack">
+                    <button class="primary-btn full-width" id="authorizeByopModalBtn"><i class="fas fa-arrow-up-right-from-square"></i><span>Authorize with Pollinations</span></button>
+                    <button class="ghost-btn full-width" id="openSettingsFromByop"><i class="fas fa-sliders"></i><span>Open BYOP settings</span></button>
+                </div>
+                <div class="setting-group">
+                    <label for="byopPreviewLink">Current authorize URL</label>
+                    <textarea id="byopPreviewLink" class="text-input" rows="4" readonly></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="commandPaletteModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div>
+                    <p class="eyebrow">Command menu</p>
+                    <h2>Jump anywhere fast</h2>
+                </div>
+                <button class="icon-btn" id="closeCommandPalette" aria-label="Close command palette"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body stack-gap">
+                <input type="search" class="text-input" id="commandPaletteInput" placeholder="Search commands, tabs, and actions">
+                <div id="commandPaletteList" class="command-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="sr-only" aria-live="polite" id="liveRegion"></div>
 
     <script type="module" src="app.js"></script>
 </body>

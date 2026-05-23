@@ -1,29 +1,18 @@
 # PollinChat
 
-A modern, feature-rich chat interface powered by [Pollinations.ai](https://pollinations.ai), providing access to multiple AI models including OpenAI, Claude, Gemini, and more.
+A modern, tabbed AI workspace powered by [Pollinations.ai](https://pollinations.ai), providing chat, image, audio, video, and embeddings builders from the checked-in OpenAPI spec.
 
 ![PollinChat Screenshot](https://github.com/user-attachments/assets/c9471ffa-7a0f-4966-b1cb-f8d58e64c6a6)
 
 ## Features
 
-- 🤖 **Multiple AI Models**: Access to 20+ AI models including:
-  - OpenAI (GPT-5.2, GPT-5 Mini)
-  - Claude (Anthropic)
-  - Gemini (Google)
-  - Mistral
-  - Grok
-  - Perplexity
-  - And many more!
-
-- 🖼️ **Vision Support**: Send images to vision-capable models for analysis
-- 💭 **Reasoning Models**: Advanced reasoning with models like Deepseek and Kimi K2
-- 💾 **Chat History**: Automatically saves your conversations locally
-- 🎨 **Theme Support**: Choose between Light, Dark (Deep Midnight), and System theme options with beautiful glassmorphic UI
-- 📱 **Responsive Design**: Works seamlessly on desktop and mobile devices
-- 📝 **Markdown & Code Highlighting**: Beautiful rendering of formatted text and code blocks with syntax highlighting
-- 🎯 **Advanced Tools**: Google Search integration and code execution capabilities for supported models
-- 🔒 **Privacy First**: All data stored locally in your browser - no data sent to external servers except AI API calls
-- ✨ **Polished UI**: Modern Deep Midnight theme with smooth animations and refined interactions
+- 🧭 **Spec-driven workspace**: Top-level tabs for Chat/Text, Image, Audio, Video, and Embeddings, all derived from `api.json`
+- 🖱️ **Scrollbar fix**: The app scrolls on the full-width main content area so the browser scrollbar stays on the far-right edge
+- 💬 **Preserved chat experience**: Existing history, model selection, reasoning controls, search/code toggles, and vision upload remain available
+- 🧪 **Request builders**: Each non-chat modality exposes a focused request builder with live model lists, presets, defaults, history, export, retry, and copy-request actions
+- 🔑 **BYOP onboarding**: Pollinations keys are stored in `localStorage` only, with both manual paste and redirect-based Bring Your Own Pollen support
+- 📦 **Shared API client**: Reads the base URL from `api.json` and allows an optional override in Settings
+- ⌨️ **Productivity UX**: Command palette, keyboard shortcuts, per-tab favorites/search, transcript export, and responsive polish
 
 ## Getting Started
 
@@ -55,19 +44,28 @@ That's it! No build process required.
 
 ## Usage
 
+### Entering your API key
+
+Use either of these flows:
+
+1. **Settings → Pollinations API key**: paste your key and save it
+2. **BYOP → Authorize with Pollinations**: complete the redirect flow and let PollinChat capture `#api_key=...` automatically
+
+Keys are stored in `localStorage` only.
+
 ### Starting a Conversation
 
-1. Select your preferred AI model from the dropdown menu
-2. Type your message in the input box at the bottom
-3. Press Enter or click the send button
+1. Stay on the **Chat/Text** tab
+2. Select your preferred AI model from the chat model picker
+3. Type your message in the composer at the bottom
+4. Press Enter or click the send button
 
-### Attaching Images
+### Generating Other Modalities
 
-For vision-capable models:
-1. Click the paperclip icon
-2. Select an image from your device
-3. Add your question or prompt
-4. Send the message
+- **Image**: open the Image tab, set prompt/model/size options, then click **Run request**
+- **Audio**: open the Audio tab, fill the CreateSpeechRequest builder, then generate and play/download the result
+- **Video**: open the Video tab, set prompt/model/duration/aspect ratio, then preview or download the MP4
+- **Embeddings**: open the Embeddings tab, submit text or batch input, then inspect/copy/export the vector response
 
 ### Managing Chat History
 
@@ -77,39 +75,23 @@ For vision-capable models:
 
 ### Settings
 
-Access settings by clicking the gear icon:
-- **API Key**: Required for all models
-- **Theme**: Choose between Light, Dark, or System theme
-- **Delete All Chats**: Clear all conversation history
+Access settings from the gear button in the sidebar or top bar:
+- **Pollinations API key**: required for generation requests
+- **Base URL override**: optional override for the spec-provided server URL
+- **Theme**: choose Light, Dark, or System
+- **Default chat model**: set the default chat/text model
+- **BYOP client_id / redirect URI / scope / models / budget / expiry**: configure the redirect-based Bring Your Own Pollen authorization flow
 
-## Supported Models
+## Model Discovery
 
-### Vision-Capable Models
-- OpenAI Fast
-- OpenAI
-- OpenAI Large
-- Claude Fast
-- Claude
-- Claude Large
-- Gemini
-- Gemini Large
-- Gemini Search
-- Grok
-- Midjourney
+PollinChat fetches model lists from the Pollinations endpoints described in `api.json`:
 
-### Reasoning Models
-- Deepseek
-- Kimi K2 Thinking
-- Perplexity Reasoning
-- Gemini Large
-- OpenAI Large
+- `/text/models`
+- `/image/models`
+- `/audio/models`
+- `/embeddings/models`
 
-### Additional Models
-- Mistral
-- Qwen Coder
-- Perplexity Fast
-- Nova Micro
-- ChickyTutor
+If those endpoints are unavailable, the app falls back to a curated local list so the UI still works offline or in restricted environments.
 
 ## Technologies Used
 
