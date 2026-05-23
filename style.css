@@ -642,14 +642,18 @@ input:checked + .slider:before { transform: translateX(14px); }
     gap: 24px;
 
     overflow-x: hidden;
-    overflow-y: auto; /* chat-only scroll */
+    overflow-y: auto;
 
-    /* Ensure this region has its own scrolling box */
     flex: 1;
     min-height: 0;
 
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
+}
+
+/* Modality consoles should not interfere with chat scroll */
+.modality-console {
+    overflow: visible;
 }
 
 /* Prevent the chat container from ever capturing scrollbars */

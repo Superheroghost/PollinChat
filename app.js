@@ -1060,15 +1060,13 @@ function clearMessages() {
 }
 
 function scrollToBottom() {
-    // Window-level scrolling: move viewport to bottom of the chat content.
-    // This avoids relying on any internal overflow containers.
     const list = document.getElementById('messagesList');
     if (!list) return;
-
-    // Scroll the nearest scrollable ancestor (fallback to window)
-    const rect = list.getBoundingClientRect();
-    const absoluteBottom = rect.bottom + window.scrollY;
-    window.scrollTo({ top: absoluteBottom, behavior: 'smooth' });
+    // messages-list owns scrolling
+    list.scrollTo({
+        top: list.scrollHeight,
+        behavior: 'smooth'
+    });
 }
 
 // State Persistence
