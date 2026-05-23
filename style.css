@@ -71,11 +71,22 @@ body {
     background-color: var(--bg-primary);
     color: var(--text-primary);
     min-height: 100vh;
-    overflow-y: auto; /* window-level scrolling */
+
+    /* Prevent page/window scrolling; wheel should affect only inner scroll regions */
+    overflow-y: hidden;
     overflow-x: hidden;
+
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
     display: flex;
+}
+
+/* Ensure wheel events don’t bubble to the page */
+#sidebar,
+#chatContainer,
+#messagesList,
+.chat-history {
+    overscroll-behavior: contain;
 }
 
 /* Custom Scrollbar Styling */
