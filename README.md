@@ -2,6 +2,8 @@
 
 A modern, feature-rich chat interface powered by [Pollinations.ai](https://pollinations.ai), providing access to multiple AI models including OpenAI, Claude, Gemini, and more.
 
+[![Build with Ona](https://ona.com/build-with-ona.svg)](https://app.ona.com/#https://github.com/Superheroghost/PollinChat)
+
 ![PollinChat Screenshot](https://github.com/user-attachments/assets/c9471ffa-7a0f-4966-b1cb-f8d58e64c6a6)
 
 ## Features
@@ -26,6 +28,8 @@ A modern, feature-rich chat interface powered by [Pollinations.ai](https://polli
 - ✨ **Polished UI**: Modern Deep Midnight theme with smooth animations and refined interactions
 
 ## Getting Started
+
+Prefer to skip the local setup? Click the **Build with Ona** badge above to open this repository in a ready-to-use cloud environment.
 
 ### Prerequisites
 
