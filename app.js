@@ -124,6 +124,15 @@ function truncateModelDescription(description) {
 }
 
 // Populate model selector dropdowns
+function modelMatches(model, names) {
+    const entry = state.models.find(m => m.name === model);
+    return [model, ...(entry?.aliases || [])].some(name => names.includes(name));
+}
+
+function resolveModelName(name) {
+    return state.models.find(model => modelMatches(model.name, [name]))?.name || state.models[0]?.name || name;
+}
+
 function populateModelSelectors(models) {
     const modelSelector = document.getElementById('modelSelector');
     const defaultModelSelect = document.getElementById('defaultModelSelect');
@@ -161,13 +170,13 @@ function populateModelSelectors(models) {
     if (models.find(m => m.name === currentModel)) {
         modelSelector.value = currentModel;
     } else if (models.length > 0) {
-        modelSelector.value = state.settings.defaultModel || models[0].name;
+        modelSelector.value = resolveModelName(state.settings.defaultModel);
     }
     
     if (models.find(m => m.name === currentDefaultModel)) {
         defaultModelSelect.value = currentDefaultModel;
     } else if (models.length > 0) {
-        defaultModelSelect.value = state.settings.defaultModel || models[0].name;
+        defaultModelSelect.value = resolveModelName(state.settings.defaultModel);
     }
     
     // Update controls after populating
@@ -254,11 +263,6 @@ async function init() {
     // Fetch models from API
     await fetchModels();
     
-    // Apply saved default model
-    if (state.settings.defaultModel) {
-        modelSelector.value = state.settings.defaultModel;
-    }
-    
     // Initialize tool controls based on current model
     updateModelControls();
     
@@ -276,11 +280,11 @@ function updateModelControls() {
     attachBtn.title = isVision ? 'Attach image' : 'Selected model does not support images';
     
     // Update tools UI - use hardcoded lists, ignore API tools field
-    const hasSearch = GOOGLE_SEARCH_MODELS.includes(model);
-    const hasCode = CODE_EXECUTION_MODELS.includes(model);
+    const hasSearch = modelMatches(model, GOOGLE_SEARCH_MODELS);
+    const hasCode = modelMatches(model, CODE_EXECUTION_MODELS);
     
     // Auto-enable search for gemini-search and perplexity models
-    const shouldAutoEnableSearch = model === 'gemini-search' || model.startsWith('perplexity');
+    const shouldAutoEnableSearch = modelMatches(model, ['gemini-search', 'perplexity-fast', 'perplexity-reasoning']);
     if (shouldAutoEnableSearch && hasSearch) {
         state.toolsEnabled.search = true;
     }
@@ -297,11 +301,11 @@ function updateModelControls() {
     
     if (isReasoning) {
         // Only openai-large and gemini-large get reasoning_effort dropdown
-        const isEffortModel = REASONING_EFFORT_MODELS.includes(model);
+        const isEffortModel = modelMatches(model, REASONING_EFFORT_MODELS);
         reasoningEffort.style.display = isEffortModel ? 'block' : 'none';
         
         // Rebuild reasoning effort options for specific models
-        if (model === 'openai-large') {
+        if (modelMatches(model, ['openai-large'])) {
             reasoningEffort.innerHTML = `
                 <option value="none">None</option>
                 <option value="minimal">Minimal</option>
@@ -310,7 +314,7 @@ function updateModelControls() {
                 <option value="high">High</option>
                 <option value="xhigh">X-High</option>
             `;
-        } else if (model === 'gemini-large') {
+        } else if (modelMatches(model, ['gemini-large'])) {
             reasoningEffort.innerHTML = `
                 <option value="low" selected>Low</option>
                 <option value="high">High</option>
@@ -394,7 +398,7 @@ function setupEventListeners() {
     document.getElementById('settingsBtn').addEventListener('click', () => {
         apiKeyInput.value = state.settings.apiKey;
         themeSelect.value = state.settings.theme;
-        defaultModelSelect.value = state.settings.defaultModel || 'openai';
+        defaultModelSelect.value = resolveModelName(state.settings.defaultModel || 'openai');
         settingsModal.style.display = 'flex';
     });
 
@@ -746,10 +750,10 @@ async function fetchAIResponse(messages) {
     let availableTools = TOOLS.filter(tool => {
         const name = tool.function.name;
         if (name === 'google_search') {
-            return GOOGLE_SEARCH_MODELS.includes(model) && state.toolsEnabled.search;
+            return modelMatches(model, GOOGLE_SEARCH_MODELS) && state.toolsEnabled.search;
         }
         if (name === 'code_execution') {
-            return CODE_EXECUTION_MODELS.includes(model) && state.toolsEnabled.code;
+            return modelMatches(model, CODE_EXECUTION_MODELS) && state.toolsEnabled.code;
         }
         return false; 
     });
@@ -771,7 +775,7 @@ async function fetchAIResponse(messages) {
     // Add reasoning parameters if applicable
     if (REASONING_MODELS.includes(model)) {
         // Only openai-large and gemini-large get reasoning_effort
-        if (REASONING_EFFORT_MODELS.includes(model)) {
+        if (modelMatches(model, REASONING_EFFORT_MODELS)) {
             body.reasoning_effort = reasoningEffort.value;
         }
         
@@ -1045,7 +1049,7 @@ window.setInput = (text) => {
 };
 
 window.switchAndRetry = (modelValue) => {
-    modelSelector.value = modelValue;
+    modelSelector.value = resolveModelName(modelValue);
     modelSelector.dispatchEvent(new Event('change'));
     
     // Get last user message
